@@ -1,11 +1,10 @@
-#conexion con la base de datos con la nueva base de datos ehm.
-
+#CODIGO DE CONECCION A LA BD EHM YA FUNCIONANDO#  #CONEXION EN LA BD EHM
 import pyodbc
 
 
 class ConectorSQLServer:
 
-    def __init__(self, connection_string, table_name="parametros"):
+    def __init__(self, connection_string, table_name="emhart.parametros"):
         self.connection_string = connection_string
         self.table_name = table_name
         self.conn = None
@@ -21,7 +20,7 @@ class ConectorSQLServer:
 
     def obtener_id_maquina(self, codigo_celda):
         """Obtiene el Id primario (INT) de una celda/máquina a partir de su código (ej. 'CELDA-01')."""
-        query = "SELECT Id FROM dbo.maquinas WHERE IdMaquina = ? AND Activo = 1;"
+        query = "SELECT Id FROM emhart.maquinas WHERE IdMaquina = ? AND Activo = 1;"
         try:
             if self.cursor is None:
                 self.connect()
@@ -31,7 +30,7 @@ class ConectorSQLServer:
             if row:
                 return row[0]  # Retorna el Id entero
             else:
-                print(f"Advertencia: No se encontró la máquina '{codigo_celda}' activa en dbo.maquinas.")
+                print(f"Advertencia: No se encontró la máquina '{codigo_celda}' activa en emhart.maquinas.")
                 return None
         except Exception as e:
             print(f"Error al obtener ID de la máquina '{codigo_celda}': {e}")
@@ -41,8 +40,8 @@ class ConectorSQLServer:
         """Consulta las tolerancias activas asociadas al ID entero de la máquina enviando su código."""
         query = """
             SELECT rt.salida, rt.parametro, rt.min_val, rt.max_val
-            FROM dbo.referencia_tolerancia rt
-            INNER JOIN dbo.maquinas m ON rt.id_maquina = m.Id
+            FROM emhart.referencia_tolerancia rt
+            INNER JOIN emhart.maquinas m ON rt.id_maquina = m.Id
             WHERE m.IdMaquina = ? AND rt.estado = 1;
         """
         try:

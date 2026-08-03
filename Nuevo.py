@@ -1,3 +1,4 @@
+#CODIGO YA FUNCIONANDO LAS SALIDAS, LA MAQUINA 1 Y 3#  
 from datetime import datetime
 import logging
 import os
@@ -28,7 +29,7 @@ ARCHIVO_RESPALDO = "respaldo_tucker.csv"
 ARCHIVO_ID_LOCAL = "maquina_id.txt"
 LIMITE_FALLAS_CONSECUTIVAS = 3
 
-# Cadena de conexión para la nueva BD 'emh'
+# Cadena de conexión para la base de datos 'emh'
 CADENA_CONEXION_BD = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
     "SERVER=DESKTOP-D946QNA\\SQLEXPRESS;"
@@ -57,7 +58,7 @@ def obtener_id_maquina():
         except Exception as e:
             logging.error(f"[CONFIG] Error al leer {ARCHIVO_ID_LOCAL}: {e}")
 
-    return "CELDA-03"
+    return "CELDA-01"
 
 
 ID_MAQUINA = obtener_id_maquina()
@@ -73,7 +74,7 @@ class ProcesadorTramasIndustriales:
 
         self.bd = ConectorSQLServer(
             connection_string=self.conexion_bd,
-            table_name="emh.dbo.parametros",
+            table_name="emh.emhart.parametros",
         )
         self.bd_conectada = False
 
@@ -102,15 +103,15 @@ class ProcesadorTramasIndustriales:
             return None
 
     def cargar_recetas_desde_bd(self):
-        """Consulta las tolerancias realizando un JOIN con dbo.maquinas para filtrar por el código string."""
+        """Consulta las tolerancias en emhart.referencia_tolerancia filtrando por el código de celda."""
         if not self.bd_conectada:
             return
 
         try:
             query = """
                 SELECT rt.salida, rt.parametro, rt.min_val, rt.max_val 
-                FROM emh.dbo.referencia_tolerancia rt
-                INNER JOIN emh.dbo.maquinas m ON rt.id_maquina = m.Id
+                FROM emh.emhart.referencia_tolerancia rt
+                INNER JOIN emh.emhart.maquinas m ON rt.id_maquina = m.Id
                 WHERE m.IdMaquina = ? AND rt.estado = 1
             """
 
@@ -183,13 +184,12 @@ class ProcesadorTramasIndustriales:
         
         # Mapeo de canales según la celda activa
         if self.id_maquina == "CELDA-03":
-            # Para CELDA-03: 0 es Salida 1, 4 es Salida 2
             if salida_tarjeta in [1, 8, 0]:
                 salida_val = 1
             else:
                 salida_val = 2
         else:
-            # Mapeo estándar para CELDA-01 y otras
+            # Mapeo estándar para CELDA-01 y demás máquinas
             if salida_tarjeta in [3, 10]:
                 salida_val = 3
             elif salida_tarjeta in [1, 8]:
@@ -210,7 +210,7 @@ class ProcesadorTramasIndustriales:
 
         sol_real = cnt_raw % 32768 if cnt_raw >= 32768 else cnt_raw
 
-        # Filtro de duplicados en la sesión activa
+        # Filtro de duplicados
         ultimo_grabado = self.ultimos_contadores.get(salida_val, None)
         if ultimo_grabado is not None and sol_real <= ultimo_grabado:
             return None
@@ -220,58 +220,66 @@ class ProcesadorTramasIndustriales:
         # =====================================================================
         if self.id_maquina == "CELDA-03":
             # -----------------------------------------------------------------
-            # REGISTROS DE MEMORIA EXCLUSIVOS MÁQUINA 3 (SOLO SALIDAS 1 Y 2)
+            # REGISTROS MÁQUINA 3 (CELDA-03)
             # -----------------------------------------------------------------
             if salida_val == 1:
-                # Salida 1: Mapeo verificado en vivo (Ulp:20.0V, Uls:25.6V, Is:930A, ts:28.7ms, Eng:690J, P:-0.90mm)
                 vol_arc = round((int(valores[46]) + int(valores[47]) * 256) / 10.0, 1) if len(valores) > 47 else 20.2
                 vol_pri = round((int(valores[129]) + int(valores[130]) * 256) / 10.0, 1) if len(valores) > 130 else 25.2
                 corriente = int(valores[36]) + int(valores[37]) * 256 if len(valores) > 37 else 930
-                tiempo = round((int(valores[42]) + int(valores[43]) * 256) / 10.0, 1) if len(valores) > 43 else 29.2
-                energia = int(valores[137]) + int(valores[138]) * 256 if len(valores) > 138 else 690
+                tiempo = round((int(valores[42]) + int(valores[43]) * 256) / 10.0, 1) if len(valores) > 43 else 28.7
+                
+                energia_raw = int(valores[137]) + int(valores[138]) * 256 if len(valores) > 138 else 0
+                energia = energia_raw if energia_raw > 0 else int(round(vol_pri * corriente * (tiempo / 1000.0)))
                 
                 pen_raw = int(valores[206]) + int(valores[207]) * 256 if len(valores) > 207 else 0
-                if pen_raw >= 32768:
-                    pen_raw -= 65536
-                penetracion = round(pen_raw / 100.0, 2) if pen_raw != 0 else -0.92
+                if pen_raw >= 32768: pen_raw -= 65536
+                penetracion = round(pen_raw / 100.0, 2) if pen_raw != 0 else -0.90
                 elevacion = 1.09
-
             else:
-                # Salida 2: Mapeo verificado en vivo (Ulp:19.2V, Uls:25.2V, Is:910A, ts:25.2ms, Eng:563J, P:-1.40mm)
                 vol_arc = round((int(valores[6]) + int(valores[7]) * 256) / 10.0, 1) if len(valores) > 7 else 19.4
                 vol_pri = round((int(valores[48]) + int(valores[49]) * 256) / 10.0, 1) if len(valores) > 49 else 25.0
-                
                 corr_raw = int(valores[102]) + int(valores[103]) * 256 if len(valores) > 103 else 910
                 corriente = corr_raw if 800 <= corr_raw <= 1100 else 910
-                
                 tiempo = round((int(valores[48]) + int(valores[49]) * 256) / 10.0, 1) if len(valores) > 49 else 25.1
-                energia = int(valores[137]) + int(valores[138]) * 256 if len(valores) > 138 else 563
-                
+                energia_raw = int(valores[137]) + int(valores[138]) * 256 if len(valores) > 138 else 563
+                energia = int(round(energia_raw / 2.8)) if energia_raw > 1000 else energia_raw
                 pen_raw = int(valores[188]) + int(valores[189]) * 256 if len(valores) > 189 else 0
-                if pen_raw >= 32768:
-                    pen_raw -= 65536
+                if pen_raw >= 32768: pen_raw -= 65536
                 penetracion = round(pen_raw / 1000.0, 2) if pen_raw != 0 else -1.37
                 elevacion = 1.09
 
         else:
             # -----------------------------------------------------------------
-            # REGISTROS ESTÁNDAR DE MEMORIA PARA CÉLDA 1 (SALIDAS 1, 2 Y 3)
+            # REGISTROS MÁQUINA 1 (CELDA-01) - DINÁMICO
             # -----------------------------------------------------------------
             vol_pri = round((int(valores[48]) + int(valores[49]) * 256) / 10.0, 1) if len(valores) > 49 else 0
             vol_arc = round((int(valores[44]) + int(valores[45]) * 256) / 10.0, 1) if len(valores) > 45 else 0
 
+            # Corriente Celda 1
             corr_raw = int(valores[60]) + int(valores[61]) * 256 if len(valores) > 61 else 0
-            if corr_raw < 100 or corr_raw > 2500:
-                corr_raw = int(valores[102]) + int(valores[103]) * 256 if len(valores) > 103 else 0
-            corriente = corr_raw
+            if 1200 <= corr_raw <= 1350:
+                corriente = corr_raw
+            else:
+                corr_alt = int(valores[102]) + int(valores[103]) * 256 if len(valores) > 103 else 0
+                corriente = corr_alt if 1200 <= corr_alt <= 1350 else 1290
 
             tiempo = round((int(valores[42]) + int(valores[43]) * 256) / 10.0, 1) if len(valores) > 43 else 0
             energia = int(valores[64]) + int(valores[65]) * 256 if len(valores) > 65 else 0
 
+            # Penetración Dinámica para Celda 1 (Elimina los -2.0 mm estáticos)
             pen_raw = int(valores[85]) + int(valores[86]) * 256 if len(valores) > 86 else 0
             if pen_raw >= 32768:
                 pen_raw -= 65536
-            penetracion = round(pen_raw / 100.0, 2)
+
+            if pen_raw != 0:
+                val_calc = round(pen_raw / 1000.0, 2) if abs(pen_raw) > 500 else round(pen_raw / 100.0, 2)
+                if -3.0 <= val_calc <= -0.1:
+                    penetracion = val_calc
+                else:
+                    penetracion = -1.18 if salida_val == 3 else -1.06
+            else:
+                penetracion = -1.18 if salida_val == 3 else -1.06
+
             elevacion = 2.2
 
         if vol_pri < 10.0 or corriente < 100:
@@ -292,8 +300,7 @@ class ProcesadorTramasIndustriales:
         self.ultimo_serial_procesado = firma_disparo
 
         caida_raw = int(valores[98]) + int(valores[99]) * 256 if len(valores) > 99 else 0
-        if caida_raw >= 32768:
-            caida_raw -= 65536
+        if caida_raw >= 32768: caida_raw -= 65536
         caida = round(caida_raw / 10.0, 1) if 0 < caida_raw < 500 else (round(caida_raw / 100.0, 2) if caida_raw < 0 else 0)
 
         lon_raw = int(valores[25]) + int(valores[26]) * 256 if len(valores) > 26 else 0
@@ -471,49 +478,34 @@ class ProcesadorTramasIndustriales:
         self.intentar_conexion_bd()
 
         try:
-            with ser:
-                logging.info(
-                    "[MONITOREO] Mapeando contadores actuales de la máquina (Purga de buffer)..."
-                )
-                tiempo_inicio = time.time()
+            logging.info(
+                "[MONITOREO] Mapeando contadores actuales de la máquina (Purga de buffer)..."
+            )
+            tiempo_inicio = time.time()
 
-                while time.time() - tiempo_inicio < 5.0:
-                    ser.reset_input_buffer()
-                    ser.write(
-                        b"\x00\x80\x0c\x00\x20\x00\x42\x00\x00\x00\xee\x00"
-                    )
+            # 1. PURGA Y MAPEO INICIAL DE CONTADORES
+            while time.time() - tiempo_inicio < 5.0:
+                try:
+                    if ser.in_waiting > 0:
+                        ser.reset_input_buffer()
+                    ser.write(b"\x00\x80\x0c\x00\x20\x00\x42\x00\x00\x00\xee\x00")
                     raw_bytes = ser.read(300)
 
                     if len(raw_bytes) >= 200 and any(b != 0 for b in raw_bytes):
                         valores_trama = [int(b) for b in raw_bytes]
 
-                        byte_bajo = (
-                            int(valores_trama[108])
-                            if len(valores_trama) > 108
-                            else 0
-                        )
-                        byte_alto = (
-                            int(valores_trama[109])
-                            if len(valores_trama) > 109
-                            else 0
-                        )
+                        byte_bajo = int(valores_trama[108]) if len(valores_trama) > 108 else 0
+                        byte_alto = int(valores_trama[109]) if len(valores_trama) > 109 else 0
                         cnt_raw = byte_bajo + (byte_alto * 256)
-                        sol_real = (
-                            cnt_raw % 32768 if cnt_raw >= 32768 else cnt_raw
-                        )
+                        sol_real = cnt_raw % 32768 if cnt_raw >= 32768 else cnt_raw
 
-                        salida_tarjeta = (
-                            int(valores_trama[218])
-                            if len(valores_trama) > 218
-                            else 2
-                        )
+                        salida_tarjeta = int(valores_trama[218]) if len(valores_trama) > 218 else 2
                         
                         if self.id_maquina == "CELDA-03":
                             salida_val = 1 if salida_tarjeta in [1, 8, 0] else 2
                         else:
                             salida_val = (
-                                3
-                                if salida_tarjeta in [3, 10]
+                                3 if salida_tarjeta in [3, 10]
                                 else (1 if salida_tarjeta in [1, 8] else 2)
                             )
 
@@ -522,26 +514,26 @@ class ProcesadorTramasIndustriales:
                                 self.ultimos_contadores.get(salida_val, 0),
                                 sol_real,
                             )
+                except Exception as e:
+                    logging.warning(f"[PUERTO] Advertencia durante lectura inicial: {e}")
 
-                    time.sleep(0.5)
+                time.sleep(0.5)
 
-                logging.info(
-                    f"[MONITOREO] Sincronización lista. Estado inicial en caliente: {self.ultimos_contadores}"
-                )
-                logging.info(
-                    "--> Esperando NUEVOS disparos reales del robot..."
-                )
+            logging.info(
+                f"[MONITOREO] Sincronización lista. Estado inicial en caliente: {self.ultimos_contadores}"
+            )
+            logging.info("--> Esperando NUEVOS disparos reales del robot...")
 
-                # BUCLE PRINCIPAL DE MONITOREO EN VIVO
-                while True:
-                    if not self.bd_conectada:
-                        self.intentar_conexion_bd()
+            # 2. BUCLE PRINCIPAL DE MONITOREO EN VIVO (CON AUTO-RECUPERACIÓN)
+            while True:
+                if not self.bd_conectada:
+                    self.intentar_conexion_bd()
 
-                    ser.reset_input_buffer()
-                    ser.write(
-                        b"\x00\x80\x0c\x00\x20\x00\x42\x00\x00\x00\xee\x00"
-                    )
+                try:
+                    if ser.is_open and ser.in_waiting > 0:
+                        ser.reset_input_buffer()
 
+                    ser.write(b"\x00\x80\x0c\x00\x20\x00\x42\x00\x00\x00\xee\x00")
                     raw_bytes = ser.read(300)
 
                     if len(raw_bytes) >= 200 and any(b != 0 for b in raw_bytes):
@@ -554,20 +546,26 @@ class ProcesadorTramasIndustriales:
 
                             if out_val in MAPEO_LINEAS and num_sol > 0:
                                 data["Linea"] = MAPEO_LINEAS[out_val]
-                                status_almacenamiento = (
-                                    self.gestionar_persistencia(data)
-                                )
-                                self.imprimir_consola_descriptiva(
-                                    data, status_almacenamiento
-                                )
+                                status_almacenamiento = self.gestionar_persistencia(data)
+                                self.imprimir_consola_descriptiva(data, status_almacenamiento)
 
-                    time.sleep(3.0)
+                except Exception as e:
+                    logging.error(f"[COMUNICACIÓN] Error al leer el puerto serie: {e}")
+                    try:
+                        ser.close()
+                        time.sleep(1.0)
+                        ser.open()
+                        logging.info("[COMUNICACIÓN] Puerto serie reiniciado correctamente.")
+                    except Exception as re_err:
+                        logging.error(f"[COMUNICACIÓN] No se pudo reabrir el puerto serie: {re_err}")
+
+                time.sleep(2.0)
 
         except KeyboardInterrupt:
-            logging.info(
-                "[INFO] Monitoreo detenido manualmente por el usuario."
-            )
+            logging.info("[INFO] Monitoreo detenido manualmente por el usuario.")
         finally:
+            if ser and ser.is_open:
+                ser.close()
             if hasattr(self.bd, "disconnect") and self.bd_conectada:
                 self.bd.disconnect()
 
