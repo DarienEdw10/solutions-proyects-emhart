@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoreo Celdas Tucker | Autotek</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/custom.css">
+</head>
+<body class="bg-light">
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="#">
+                <i class="bi bi-cpu-fill text-warning me-2 fs-4"></i>
+                <span class="fs-5">SISTEMA TUCKER | MONITOR</span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse mt-2 mt-lg-0" id="navbarContent">
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <span class="badge bg-success py-2 px-3">
+                        <i class="bi bi-wifi me-1"></i>ONLINE
+                    </span>
+                    <a href="recetas.html" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-sliders me-1"></i>Recetas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-3 py-md-4 px-2 px-md-4">
+
+        <!-- Estado de Salud de las Celdas -->
+        <div class="row g-2 g-md-3 mb-3 mb-md-4">
+            <div class="col-12 col-md-6">
+                <div class="card border-0 shadow-sm p-3 bg-white border-start border-success border-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small fw-bold text-uppercase d-block">Celda Operativa</span>
+                            <h5 class="fw-bold mb-0 text-dark">CELDA-01</h5>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success mb-1">🟢 OPERANDO</span>
+                            <div class="small text-muted font-monospace">Último disparo: hace 4s</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="card border-0 shadow-sm p-3 bg-white border-start border-warning border-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small fw-bold text-uppercase d-block">Celda Operativa</span>
+                            <h5 class="fw-bold mb-0 text-dark">CELDA-03</h5>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-warning text-dark mb-1">⚠️ ATENCIÓN (1 NOK)</span>
+                            <div class="small text-muted font-monospace">Último disparo: hace 12s</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPIs de Producción -->
+        <div class="row g-2 g-md-3 mb-3 mb-md-4">
+            <div class="col-6 col-xl-3">
+                <div class="card border-0 shadow-sm border-start border-primary border-4 h-100">
+                    <div class="card-body p-3">
+                        <div class="text-muted small fw-bold text-uppercase">Total Disparos</div>
+                        <div class="h3 mb-0 fw-bold text-dark">1,245</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card border-0 shadow-sm border-start border-success border-4 h-100">
+                    <div class="card-body p-3">
+                        <div class="text-muted small fw-bold text-uppercase">Calidad OK</div>
+                        <div class="h3 mb-0 fw-bold text-success">1,238</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card border-0 shadow-sm border-start border-danger border-4 h-100">
+                    <div class="card-body p-3">
+                        <div class="text-muted small fw-bold text-uppercase">Desviaciones (NOK)</div>
+                        <div class="h3 mb-0 fw-bold text-danger">7</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card border-0 shadow-sm border-start border-info border-4 h-100">
+                    <div class="card-body p-3">
+                        <div class="text-muted small fw-bold text-uppercase">Efectividad (FTT)</div>
+                        <div class="h3 mb-0 fw-bold text-info">99.4%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros y Buscador Rápido -->
+        <div class="card border-0 shadow-sm mb-3 mb-md-4">
+            <div class="card-body p-3">
+                <div class="row g-2 g-md-3 align-items-end">
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label fw-bold small mb-1">Celda</label>
+                        <select class="form-select form-select-sm" id="filtro-celda" onchange="aplicarFiltros()">
+                            <option value="">-- Todas --</option>
+                            <option value="CELDA-01">CELDA-01</option>
+                            <option value="CELDA-03">CELDA-03</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label fw-bold small mb-1">Estatus Calidad</label>
+                        <select class="form-select form-select-sm" id="filtro-estatus" onchange="aplicarFiltros()">
+                            <option value="">-- Todos --</option>
+                            <option value="OK">🟢 Solo OK</option>
+                            <option value="NOK">🔴 Solo NOK</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label fw-bold small mb-1">Turno</label>
+                        <select class="form-select form-select-sm" id="filtro-turno" onchange="aplicarFiltros()">
+                            <option value="">-- Todos --</option>
+                            <option value="T1">Turno 1</option>
+                            <option value="T2">Turno 2</option>
+                            <option value="T3">Turno 3</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3 col-lg-3">
+                        <!-- CAMBIO 1: Buscador Global en tiempo real -->
+                        <label class="form-label fw-bold small mb-1">Búsqueda Rápida</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" id="buscador-global" placeholder="Ej. #7440, Out 2..." onkeyup="aplicarFiltros()">
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-3">
+                        <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="aplicarFiltros()">
+                            <i class="bi bi-funnel-fill me-1"></i>Filtrar Datos
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfica de Tendencia -->
+        <div class="card border-0 shadow-sm mb-3 mb-md-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-graph-up text-primary me-2"></i>Tendencia de Corriente (A) y Límites de Tolerancia
+                </h6>
+                <span class="badge bg-light text-dark border">Monitoreo SPC</span>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 240px; width: 100%;">
+                    <canvas id="graficaControl"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla Principal -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h6 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-list-task me-2 text-primary"></i>Registros Recientes <small class="text-muted fw-normal">(Haz clic en una fila para ver el detalle técnico)</small>
+                </h6>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-success btn-sm fw-bold" onclick="exportarExcel()">
+                        <i class="bi bi-file-earmark-excel-fill me-1"></i>Excel
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm fw-bold" onclick="exportarPDF()">
+                        <i class="bi bi-file-earmark-pdf-fill me-1"></i>PDF
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-nowrap" id="tabla-monitoreo">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Fecha / Hora</th>
+                                <th>Celda</th>
+                                <th>Salida</th>
+                                <th>Turno</th>
+                                <th>N° Soldadura</th>
+                                <th>Corriente</th>
+                                <th>Energía</th>
+                                <th>Tiempo</th>
+                                <th>Penetración</th>
+                                <th>Estatus</th>
+                                <th>Detalle Desviación</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-body">
+                            <!-- Inyección JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- CAMBIO 2: Paginación de Tabla -->
+            <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center">
+                <span class="small text-muted" id="lbl-paginacion-info">Mostrando 1-10 de 10 registros</span>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0" id="ul-paginacion">
+                        <!-- Páginas JS -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- CAMBIO 3: Modal de Ficha Técnica Detallada por Soldadura -->
+    <div class="modal fade" id="modalDetalleSoldadura" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-cpu text-warning me-2"></i>Ficha Técnica de Soldadura <span id="modal-num-sol"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Detalle Superior -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <div class="p-2 border rounded bg-light">
+                                <small class="text-muted d-block">Serial Trazabilidad</small>
+                                <strong class="font-monospace text-primary" id="modal-serial">-</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-2 border rounded bg-light">
+                                <small class="text-muted d-block">Timestamp de Celda</small>
+                                <strong id="modal-fecha">-</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-2 border rounded bg-light">
+                                <small class="text-muted d-block">Estatus de Calidad</small>
+                                <span id="modal-estatus-badge">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Métricas Físicas Completas -->
+                    <h6 class="fw-bold border-bottom pb-2 mt-4 text-secondary"><i class="bi bi-lightning-charge me-1"></i>Parámetros Eléctricos y Mecánicos</h6>
+                    <div class="row g-3">
+                        <div class="col-6 col-md-3">
+                            <small class="text-muted d-block">Voltaje Arco Piloto</small>
+                            <strong id="modal-volarc">-</strong> V
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <small class="text-muted d-block">Voltaje Principal</small>
+                            <strong id="modal-volpri">-</strong> V
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <small class="text-muted d-block">Corriente de Soldadura</small>
+                            <strong id="modal-corriente">-</strong> A
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <small class="text-muted d-block">Energía Disipada</small>
+                            <strong id="modal-energia">-</strong> J
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <small class="text-muted d-block">Tiempo de Arco</small>
+                            <strong id="modal-tiempo">-</strong> ms
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <small class="text-muted d-block">Penetración Perno</small>
+                            <strong id="modal-penetracion">-</strong> mm
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <small class="text-muted d-block">Elevación Pistola</small>
+                            <strong id="modal-elevacion">-</strong> mm
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <small class="text-muted d-block">Longitud Perno</small>
+                            <strong id="modal-lonper">-</strong> mm
+                        </div>
+                    </div>
+
+                    <!-- Diagnóstico de Máquina -->
+                    <h6 class="fw-bold border-bottom pb-2 mt-4 text-secondary"><i class="bi bi-shield-exclamation me-1"></i>Diagnóstico de Controlador Tucker</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Código de Error</small>
+                            <span class="badge bg-secondary" id="modal-err">Err: 0</span>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Alarma del Sistema</small>
+                            <span class="badge bg-secondary" id="modal-alarma">Alarma: 0</span>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">Modo de Operación</small>
+                            <span class="badge bg-info text-dark" id="modal-modo">Modo: Auto (1)</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 p-3 rounded d-none" id="modal-alert-desviaciones">
+                        <strong class="d-block mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Desviaciones Detectadas:</strong>
+                        <span id="modal-detalles-fallas"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Librerías JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

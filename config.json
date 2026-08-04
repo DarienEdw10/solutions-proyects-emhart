@@ -1,0 +1,9 @@
+{
+    "id_maquina": "CELDA-03",
+    "puerto_serial": "AUTO",
+    "baudrate": 57600,
+    "timeout_puerto": 0.5,
+    "limite_fallas_consecutivas": 3,
+    "archivo_respaldo": "respaldo_tucker.csv",
+    "cadena_conexion_bd": "DRIVER={ODBC Driver 17 for SQL Server};SERVER=DESKTOP-D946QNA\\SQLEXPRESS;DATABASE=emh;Trusted_Connection=yes;"
+}
