@@ -13,6 +13,7 @@ namespace Enhartt.Domain.Repositories
             _context = context;
         }
 
+        // Consultas optimizadas para lectura (GET)
         public async Task<IEnumerable<T>> GetAllAsync()
         {
             return await _context.Set<T>().AsNoTracking().ToListAsync();
@@ -23,9 +24,22 @@ namespace Enhartt.Domain.Repositories
             return await _context.Set<T>().AsNoTracking().Where(predicate).ToListAsync();
         }
 
+        // Inserción de nuevos registros (POST)
         public async Task AddAsync(T entity)
         {
             await _context.Set<T>().AddAsync(entity);
+            await _context.SaveChangesAsync();
+        }
+
+        // Actualización Completa / Parcial (PUT / PATCH)
+        public void Update(T entity)
+        {
+            _context.Set<T>().Update(entity);
+        }
+
+        // Confirmación de cambios (para PUT, PATCH o operaciones por lote)
+        public async Task SaveChangesAsync()
+        {
             await _context.SaveChangesAsync();
         }
     }
