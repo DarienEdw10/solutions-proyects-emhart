@@ -23,11 +23,12 @@ namespace Enhartt.Domain.Models
         [Column("NumSol")]
         public int? NumSol { get; set; }
 
+        // Cambiados de double? a int? para coincidir con el [int] NULL de SQL Server
         [Column("VolArc")]
-        public double? VolArc { get; set; }
+        public int? VolArc { get; set; }
 
         [Column("VolPri")]
-        public double? VolPri { get; set; }
+        public int? VolPri { get; set; }
 
         [Column("Salida")]
         public int? Salida { get; set; }
@@ -36,25 +37,25 @@ namespace Enhartt.Domain.Models
         public int? Programa { get; set; }
 
         [Column("Elevacion")]
-        public double? Elevacion { get; set; }
+        public int? Elevacion { get; set; }
 
         [Column("Caida")]
-        public double? Caida { get; set; }
+        public int? Caida { get; set; }
 
         [Column("Penetracion")]
-        public double? Penetracion { get; set; }
+        public int? Penetracion { get; set; }
 
         [Column("Energia")]
-        public double? Energia { get; set; }
+        public int? Energia { get; set; }
 
         [Column("Corriente")]
-        public double? Corriente { get; set; }
+        public int? Corriente { get; set; }
 
         [Column("Tiempo")]
-        public double? Tiempo { get; set; }
+        public int? Tiempo { get; set; }
 
         [Column("LonPer")]
-        public double? LonPer { get; set; }
+        public int? LonPer { get; set; }
 
         [Column("fecha_creacion")]
         public DateTime? FechaCreacion { get; set; }

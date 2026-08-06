@@ -1,14 +1,13 @@
 // Variables globales
 let datosCompletosAPI = [];
-let datosActualesFiltrados = [];
 let miGraficaChart = null;
 let modalDetalleBS = null;
 
-// Configuración de Paginación en Servidor
+// Configuración de Paginación y Filtros en Servidor
 let paginaActual = 1;
 const registrosPorPagina = 5;
 
-// URLs base de tu API en .NET 8
+// URLs base de la API en .NET 8
 const API_URL = "http://localhost:5240/api/parametros";
 const API_KPIS_URL = "http://localhost:5240/api/parametros/kpis";
 
@@ -62,20 +61,36 @@ async function obtenerKPIsAPI() {
 }
 
 // =====================================================================
-// CONSUMO ASÍNCRONO DE REGISTROS PAGINADOS DESDE SERVIDOR
+// CONSUMO ASÍNCRONO CON FILTRADO Y PAGINACIÓN EN SERVIDOR
 // =====================================================================
 async function obtenerDatosAPI(pagina = 1) {
     try {
-        const urlPaginada = `${API_URL}?pagina=${pagina}&tamano=${registrosPorPagina}`;
+        // Capturar valores de los inputs de filtro
+        const celda = document.getElementById("filtro-celda")?.value || "";
+        const estatus = document.getElementById("filtro-estatus")?.value || "";
+        const turno = document.getElementById("filtro-turno")?.value || "";
+        const busqueda = document.getElementById("buscador-global")?.value.trim() || "";
+
+        // Construir URL dinámica con Query Parameters
+        let queryParams = new URLSearchParams({
+            pagina: pagina,
+            tamano: registrosPorPagina
+        });
+
+        if (celda) queryParams.append("celda", celda);
+        if (estatus) queryParams.append("estatus", estatus);
+        if (turno) queryParams.append("turno", turno);
+        if (busqueda) queryParams.append("busqueda", busqueda);
+
+        const urlPaginada = `${API_URL}?${queryParams.toString()}`;
         const respuesta = await fetch(urlPaginada);
         if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
 
         const resultadoPaginado = await respuesta.json();
         
-        // Elementos devueltos por la API para la página actual
         datosCompletosAPI = resultadoPaginado.elementos;
-        
-        // Renderizar la tabla con la respuesta paginada de SQL Server
+        paginaActual = resultadoPaginado.paginaActual;
+
         renderizarTablaServidor(resultadoPaginado);
     } catch (error) {
         console.error("Error al conectar con la API:", error);
@@ -90,21 +105,18 @@ async function obtenerDatosAPI(pagina = 1) {
 }
 
 // =====================================================================
-// RENDERIZADO DE TABLA + INDICADORES DE PAGINACIÓN ASÍNCRONA
+// RENDERIZADO DE TABLA Y PAGINADOR ACOTADO (VENTANA DESLIZANTE)
 // =====================================================================
 function renderizarTablaServidor(respuestaPaginada) {
     const datos = respuestaPaginada.elementos;
-    datosActualesFiltrados = datos;
-
     const tbody = document.getElementById("tabla-body");
     tbody.innerHTML = "";
 
     const totalRegistros = respuestaPaginada.totalRegistros;
     const totalPaginas = respuestaPaginada.totalPaginas;
-    paginaActual = respuestaPaginada.paginaActual;
 
     if (datos.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-muted">No se encontraron registros en la base de datos.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-muted">No se encontraron registros que coincidan con la búsqueda.</td></tr>`;
     } else {
         datos.forEach((row) => {
             const tr = document.createElement("tr");
@@ -138,97 +150,88 @@ function renderizarTablaServidor(respuestaPaginada) {
         });
     }
 
-    // Calculamos el inicio y fin visible según la página solicitada al servidor
     const inicio = totalRegistros === 0 ? 0 : ((paginaActual - 1) * registrosPorPagina) + 1;
     const fin = Math.min(inicio + datos.length - 1, totalRegistros);
 
-    // Actualizar indicador textual de paginación
     document.getElementById("lbl-paginacion-info").innerText = `Mostrando ${inicio}-${fin} de ${totalRegistros} registros`;
     
-    // Dibujar la paginación dinámica
-    renderizarPaginadorUI(totalPaginas);
+    // Renderizar los botones de paginación de forma acotada
+    renderizarPaginadorAcotadoUI(totalPaginas);
 
-    // Actualizar gráfica de control con los datos recuperados
+    // Actualizar la gráfica con los datos visibles
     inicializarGrafica(datos);
 }
 
-function renderizarPaginadorUI(totalPaginas) {
+// Renderiza un máximo de 5 números de página más los botones Anterior/Siguiente
+function renderizarPaginadorAcotadoUI(totalPaginas) {
     const ul = document.getElementById("ul-paginacion");
     ul.innerHTML = "";
 
     if (totalPaginas <= 1) return;
 
-    for (let i = 1; i <= totalPaginas; i++) {
-        const li = document.createElement("li");
-        li.className = `page-item ${i === paginaActual ? "active" : ""}`;
-        li.innerHTML = `<a class="page-link" href="#" onclick="cambiarPagina(${i}); return false;">${i}</a>`;
-        ul.appendChild(li);
+    // Botón "Anterior"
+    const liAnt = document.createElement("li");
+    liAnt.className = `page-item ${paginaActual === 1 ? "disabled" : ""}`;
+    liAnt.innerHTML = `<a class="page-link" href="#" onclick="cambiarPagina(${paginaActual - 1}); return false;">&laquo;</a>`;
+    ul.appendChild(liAnt);
+
+    // Determinar la ventana de botones a mostrar (máximo 5 botones a la vez)
+    let maxBotones = 5;
+    let inicioVentana = Math.max(1, paginaActual - Math.floor(maxBotones / 2));
+    let finVentana = inicioVentana + maxBotones - 1;
+
+    if (finVentana > totalPaginas) {
+        finVentana = totalPaginas;
+        inicioVentana = Math.max(1, finVentana - maxBotones + 1);
     }
+
+    if (inicioVentana > 1) {
+        ul.appendChild(crearItemPagina(1));
+        if (inicioVentana > 2) {
+            const liDots = document.createElement("li");
+            liDots.className = "page-item disabled";
+            liDots.innerHTML = `<span class="page-link">...</span>`;
+            ul.appendChild(liDots);
+        }
+    }
+
+    for (let i = inicioVentana; i <= finVentana; i++) {
+        ul.appendChild(crearItemPagina(i));
+    }
+
+    if (finVentana < totalPaginas) {
+        if (finVentana < totalPaginas - 1) {
+            const liDots = document.createElement("li");
+            liDots.className = "page-item disabled";
+            liDots.innerHTML = `<span class="page-link">...</span>`;
+            ul.appendChild(liDots);
+        }
+        ul.appendChild(crearItemPagina(totalPaginas));
+    }
+
+    // Botón "Siguiente"
+    const liSig = document.createElement("li");
+    liSig.className = `page-item ${paginaActual === totalPaginas ? "disabled" : ""}`;
+    liSig.innerHTML = `<a class="page-link" href="#" onclick="cambiarPagina(${paginaActual + 1}); return false;">&raquo;</a>`;
+    ul.appendChild(liSig);
 }
 
-// Cambio de página que desencadena una nueva petición asíncrona a .NET 8
+function crearItemPagina(numero) {
+    const li = document.createElement("li");
+    li.className = `page-item ${numero === paginaActual ? "active" : ""}`;
+    li.innerHTML = `<a class="page-link" href="#" onclick="cambiarPagina(${numero}); return false;">${numero}</a>`;
+    return li;
+}
+
 async function cambiarPagina(num) {
-    if (num === paginaActual) return;
+    if (num < 1 || num === paginaActual) return;
     await obtenerDatosAPI(num);
 }
 
-// =====================================================================
-// FILTRADO GLOBAL SOBRE LOS REGISTROS RECUPERADOS
-// =====================================================================
+// Aplicar filtros reiniciando a la página 1
 function aplicarFiltros() {
-    const celda = document.getElementById("filtro-celda").value;
-    const estatus = document.getElementById("filtro-estatus").value;
-    const turno = document.getElementById("filtro-turno").value;
-    const busqueda = document.getElementById("buscador-global").value.toLowerCase().trim();
-
-    let filtrados = datosCompletosAPI.filter(item => {
-        const matchCelda = !celda || item.celda === celda;
-        const matchEstatus = !estatus || item.estatus === estatus;
-        const matchTurno = !turno || item.turno === turno;
-        
-        const matchBusqueda = !busqueda || 
-            item.numSol.toString().includes(busqueda) ||
-            item.salida.toLowerCase().includes(busqueda) ||
-            item.celda.toLowerCase().includes(busqueda) ||
-            item.fecha.includes(busqueda);
-
-        return matchCelda && matchEstatus && matchTurno && matchBusqueda;
-    });
-
-    // Renderizado local del conjunto filtrado de la página
-    const tbody = document.getElementById("tabla-body");
-    tbody.innerHTML = "";
-
-    if (filtrados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-muted">No se encontraron coincidencias en los datos de la página actual.</td></tr>`;
-    } else {
-        filtrados.forEach((row) => {
-            const tr = document.createElement("tr");
-            tr.style.cursor = "pointer";
-            if (row.estatus === "NOK") tr.classList.add("fila-nok");
-
-            const badgeCalidad = row.estatus === "OK" 
-                ? `<span class="badge bg-success">🟢 OK</span>` 
-                : `<span class="badge bg-danger">🔴 NOK</span>`;
-
-            tr.innerHTML = `
-                <td><small>${row.fecha}</small></td>
-                <td><span class="badge bg-secondary">${row.celda}</span></td>
-                <td><span class="badge bg-dark">${row.salida}</span></td>
-                <td><span class="badge bg-light text-dark border">${row.turno}</span></td>
-                <td><strong>#${row.numSol}</strong></td>
-                <td>${row.corriente} A</td>
-                <td>${row.energia} J</td>
-                <td>${row.tiempo} ms</td>
-                <td>${row.penetracion} mm</td>
-                <td>${badgeCalidad}</td>
-                <td>${row.detalles ? `<small class="text-danger fw-bold">${row.detalles}</small>` : '-'}</td>
-            `;
-
-            tr.addEventListener("click", () => abrirFichaTecnica(row));
-            tbody.appendChild(tr);
-        });
-    }
+    paginaActual = 1;
+    obtenerDatosAPI(1);
 }
 
 // =====================================================================
@@ -309,8 +312,8 @@ function inicializarGrafica(datos) {
 // EXPORTACIONES
 // =====================================================================
 function exportarExcel() {
-    if (datosActualesFiltrados.length === 0) return alert("Sin datos.");
-    const dataExcel = datosActualesFiltrados.map(i => ({
+    if (datosCompletosAPI.length === 0) return alert("Sin datos.");
+    const dataExcel = datosCompletosAPI.map(i => ({
         "Fecha": i.fecha, "Celda": i.celda, "Salida": i.salida, "Turno": i.turno,
         "N° Soldadura": i.numSol, "Corriente (A)": i.corriente, "Energía (J)": i.energia,
         "Tiempo (ms)": i.tiempo, "Penetración (mm)": i.penetracion, "Estatus": i.estatus, "Desviaciones": i.detalles || "OK"
@@ -322,11 +325,11 @@ function exportarExcel() {
 }
 
 function exportarPDF() {
-    if (datosActualesFiltrados.length === 0) return alert("Sin datos.");
+    if (datosCompletosAPI.length === 0) return alert("Sin datos.");
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: "landscape" });
     doc.text("AUTOTEK MÉXICO - REPORTE CELDAS TUCKER", 14, 15);
-    const filasPDF = datosActualesFiltrados.map(i => [i.fecha, i.celda, i.salida, i.turno, `#${i.numSol}`, `${i.corriente} A`, `${i.energia} J`, `${i.tiempo} ms`, `${i.penetracion} mm`, i.estatus, i.detalles || "-"]);
+    const filasPDF = datosCompletosAPI.map(i => [i.fecha, i.celda, i.salida, i.turno, `#${i.numSol}`, `${i.corriente} A`, `${i.energia} J`, `${i.tiempo} ms`, `${i.penetracion} mm`, i.estatus, i.detalles || "-"]);
     doc.autoTable({
         startY: 22,
         head: [["Fecha", "Celda", "Salida", "Turno", "N° Sol.", "Corriente", "Energía", "Tiempo", "Penetración", "Estatus", "Desviaciones"]],
@@ -339,6 +342,13 @@ function exportarPDF() {
 // Inicialización
 document.addEventListener("DOMContentLoaded", () => {
     modalDetalleBS = new bootstrap.Modal(document.getElementById('modalDetalleSoldadura'));
+    
+    // Escuchar el click en el botón de Filtrar Datos y Enter en la caja de búsqueda
+    document.querySelector("button[onclick='aplicarFiltros()']")?.addEventListener("click", aplicarFiltros);
+    document.getElementById("buscador-global")?.addEventListener("keyup", (e) => {
+        if (e.key === "Enter") aplicarFiltros();
+    });
+
     obtenerKPIsAPI();
-    obtenerDatosAPI(1); // Cargar página 1 por defecto al iniciar
+    obtenerDatosAPI(1);
 });

@@ -4,7 +4,8 @@ namespace Enhartt.Api.Services
 {
     public interface IRecetaService
     {
-        Task GuardarCambiosRecetaAsync(string celda, string salida, List<HistorialReceta> cambios);
-        Task<IEnumerable<HistorialComparativoDto>> ObtenerHistorialAsync(string? celda, DateTime? fechaInicio, DateTime? fechaFin);
+        Task<IEnumerable<Receta>> ObtenerRecetaActivaAsync(int idMaquina, int salida);
+        Task ActualizarRecetaConHistorialAsync(int idMaquina, int salida, List<Receta> nuevosParametros, string usuario);
+        Task<IEnumerable<RecetaHistorialDto>> ObtenerHistorialCambiosAsync(int idMaquina, DateTime? fechaInicio, DateTime? fechaFin);
     }
 }

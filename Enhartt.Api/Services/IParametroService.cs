@@ -4,7 +4,14 @@ namespace Enhartt.Api.Services
 {
     public interface IParametroService
     {
-        Task<ResultadoPaginadoDto<object>> ObtenerParametrosPaginadosAsync(int pagina = 1, int registrosPorPagina = 5);
+        Task<ResultadoPaginadoDto<object>> ObtenerParametrosPaginadosAsync(
+            int pagina = 1, 
+            int tamano = 5,
+            string? celda = null,
+            string? estatus = null,
+            string? turno = null,
+            string? busqueda = null);
+
         Task<ResumenKpiDto> ObtenerResumenKpisAsync();
     }
 }

@@ -1,11 +1,10 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Enhartt.Domain.Models
 {
-    [Table("referencia_tolerancia", Schema = "emhart")]
-    public class ReferenciaTolerancia
+    [Table("receta", Schema = "emhart")]
+    public class Receta
     {
         [Key]
         [Column("id_referencia")]
@@ -27,18 +26,15 @@ namespace Enhartt.Domain.Models
         public double MaxVal { get; set; }
 
         [Column("fecha_creacion")]
-        public DateTime FechaCreacion { get; set; }
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
         [Column("fecha_modificacion")]
         public DateTime? FechaModificacion { get; set; }
 
         [Column("modificado_por")]
-        public string ModificadoPor { get; set; } = string.Empty;
+        public string ModificadoPor { get; set; } = "Usuario_Web";
 
         [Column("estado")]
-        public bool Estado { get; set; }
-
-        [ForeignKey("IdMaquina")]
-        public Maquina? Maquina { get; set; }
+        public bool Estado { get; set; } = true;
     }
 }

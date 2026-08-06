@@ -1,26 +1,61 @@
+using Enhartt.Domain.Data;
 using Enhartt.Domain.Models;
-using Enhartt.Domain.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace Enhartt.Api.Services
 {
     public class ParametroService : IParametroService
     {
-        private readonly IRepository<Parametro> _parametroRepository;
+        private readonly AppDbContext _context;
 
-        public ParametroService(IRepository<Parametro> parametroRepository)
+        public ParametroService(AppDbContext context)
         {
-            _parametroRepository = parametroRepository;
+            _context = context;
         }
 
-        public async Task<ResultadoPaginadoDto<object>> ObtenerParametrosPaginadosAsync(int pagina = 1, int registrosPorPagina = 5)
+        public async Task<ResultadoPaginadoDto<object>> ObtenerParametrosPaginadosAsync(
+            int pagina = 1,
+            int registrosPorPagina = 5,
+            string? celda = null,
+            string? estatus = null,
+            string? turno = null,
+            string? busqueda = null)
         {
-            var datos = await _parametroRepository.GetAllAsync();
-            var totalRegistros = datos.Count();
+            // Iniciar consulta IQueryable sobre SQL Server
+            var query = _context.Parametros.AsNoTracking().AsQueryable();
 
-            // Paginación a nivel de servidor / consulta
-            var datosPaginados = datos.OrderByDescending(p => p.IdRegistro)
-                                      .Skip((pagina - 1) * registrosPorPagina)
-                                      .Take(registrosPorPagina);
+            // 1. Filtro por Celda (1 = CELDA-01, 3 = CELDA-03)
+            if (!string.IsNullOrEmpty(celda) && celda != "-- Todas --")
+            {
+                int idMaquina = celda == "CELDA-03" ? 3 : 1;
+                query = query.Where(p => p.IdentificadorId == idMaquina);
+            }
+
+            // 2. Filtro por Estatus de Calidad
+            if (!string.IsNullOrEmpty(estatus) && estatus != "-- Todos --")
+            {
+                if (estatus == "Solo OK" || estatus == "OK")
+                    query = query.Where(p => p.EstatusCalidad != null && p.EstatusCalidad.Trim().ToUpper() == "OK");
+                else if (estatus == "Solo NOK" || estatus == "NOK")
+                    query = query.Where(p => p.EstatusCalidad != null && p.EstatusCalidad.Trim().ToUpper() != "OK");
+            }
+
+            // 3. Filtro por Búsqueda Rápida (Coincidencia parcial en N° Soldadura o Fallas)
+            if (!string.IsNullOrEmpty(busqueda))
+            {
+                query = query.Where(p => (p.NumSol != null && p.NumSol.ToString().Contains(busqueda)) ||
+                                         (p.DetallesFallas != null && p.DetallesFallas.Contains(busqueda)) ||
+                                         (p.Linea != null && p.Linea.Contains(busqueda)));
+            }
+
+            // Conteo exacto en SQL Server según los filtros aplicados
+            var totalRegistros = await query.CountAsync();
+
+            // Paginación eficiente a nivel SQL (OFFSET y FETCH)
+            var datosPaginados = await query.OrderByDescending(p => p.IdRegistro)
+                                           .Skip((pagina - 1) * registrosPorPagina)
+                                           .Take(registrosPorPagina)
+                                           .ToListAsync();
 
             var elementosMapped = datosPaginados.Select(p => new
             {
@@ -41,6 +76,7 @@ namespace Enhartt.Api.Services
                 estatus = (p.EstatusCalidad ?? "OK").Trim().ToUpper() == "OK" ? "OK" : "NOK",
                 detalles = p.DetallesFallas ?? "",
                 turno = "T1"
+
             });
 
             return new ResultadoPaginadoDto<object>
@@ -48,30 +84,28 @@ namespace Enhartt.Api.Services
                 Elementos = elementosMapped,
                 TotalRegistros = totalRegistros,
                 PaginaActual = pagina,
-                RegistrosPorPagina = registrosPorPagina
+                TamanoPagina = registrosPorPagina
             };
         }
 
         public async Task<ResumenKpiDto> ObtenerResumenKpisAsync()
         {
-            var datos = await _parametroRepository.GetAllAsync();
-            var lista = datos.ToList();
+            var query = _context.Parametros.AsNoTracking();
 
-            int total = lista.Count;
+            int total = await query.CountAsync();
             if (total == 0) return new ResumenKpiDto();
 
-            int ok = lista.Count(p => (p.EstatusCalidad ?? "OK").Trim().ToUpper() == "OK");
+            int ok = await query.CountAsync(p => p.EstatusCalidad != null && p.EstatusCalidad.Trim().ToUpper() == "OK");
             int nok = total - ok;
             double ftt = Math.Round(((double)ok / total) * 100, 1);
 
-            // Obtener el registro más reciente por cada Celda
-            var ultimoCelda1 = lista.Where(p => p.IdentificadorId != 3)
-                                    .OrderByDescending(p => p.Fecha)
-                                    .FirstOrDefault();
+            var ultimoCelda1 = await query.Where(p => p.IdentificadorId != 3)
+                                          .OrderByDescending(p => p.Fecha)
+                                          .FirstOrDefaultAsync();
 
-            var ultimoCelda3 = lista.Where(p => p.IdentificadorId == 3)
-                                    .OrderByDescending(p => p.Fecha)
-                                    .FirstOrDefault();
+            var ultimoCelda3 = await query.Where(p => p.IdentificadorId == 3)
+                                          .OrderByDescending(p => p.Fecha)
+                                          .FirstOrDefaultAsync();
 
             return new ResumenKpiDto
             {

@@ -13,43 +13,73 @@ namespace Enhartt.Api.Services
             _context = context;
         }
 
-        public async Task GuardarCambiosRecetaAsync(string celda, string salida, List<HistorialReceta> cambios)
+        public async Task<IEnumerable<Receta>> ObtenerRecetaActivaAsync(int idMaquina, int salida)
         {
-            foreach (var item in cambios)
+            return await _context.Receta
+                                 .AsNoTracking()
+                                 .Where(r => r.IdMaquina == idMaquina && r.Salida == salida && r.Estado)
+                                 .ToListAsync();
+        }
+
+        public async Task ActualizarRecetaConHistorialAsync(int idMaquina, int salida, List<Receta> nuevosParametros, string usuario)
+        {
+            var ahora = DateTime.Now;
+
+            var recetasActuales = await _context.Receta
+                                                .Where(r => r.IdMaquina == idMaquina && r.Salida == salida && r.Estado)
+                                                .ToListAsync();
+
+            foreach (var nuevo in nuevosParametros)
             {
-                item.Celda = celda;
-                item.Salida = salida;
-                item.FechaModificacion = DateTime.Now;
-                _context.HistorialRecetas.Add(item);
+                var coincidencia = recetasActuales.FirstOrDefault(r => r.Parametro == nuevo.Parametro);
+
+                if (coincidencia != null && (coincidencia.MinVal != nuevo.MinVal || coincidencia.MaxVal != nuevo.MaxVal))
+                {
+                    coincidencia.Estado = false;
+                    coincidencia.FechaModificacion = ahora;
+                    _context.Receta.Update(coincidencia);
+
+                    var nuevaReceta = new Receta
+                    {
+                        IdMaquina = idMaquina,
+                        Salida = salida,
+                        Parametro = nuevo.Parametro,
+                        MinVal = nuevo.MinVal,
+                        MaxVal = nuevo.MaxVal,
+                        FechaCreacion = ahora,
+                        ModificadoPor = usuario,
+                        Estado = true
+                    };
+                    await _context.Receta.AddAsync(nuevaReceta);
+                }
             }
+
             await _context.SaveChangesAsync();
         }
 
-        public async Task<IEnumerable<HistorialComparativoDto>> ObtenerHistorialAsync(string? celda, DateTime? fechaInicio, DateTime? fechaFin)
+        public async Task<IEnumerable<RecetaHistorialDto>> ObtenerHistorialCambiosAsync(int idMaquina, DateTime? fechaInicio, DateTime? fechaFin)
         {
-            var query = _context.HistorialRecetas.AsNoTracking().AsQueryable();
-
-            if (!string.IsNullOrEmpty(celda))
-                query = query.Where(h => h.Celda == celda);
+            var query = _context.Receta.AsNoTracking().Where(r => r.IdMaquina == idMaquina);
 
             if (fechaInicio.HasValue)
-                query = query.Where(h => h.FechaModificacion >= fechaInicio.Value);
+                query = query.Where(r => r.FechaCreacion >= fechaInicio.Value);
 
             if (fechaFin.HasValue)
-                query = query.Where(h => h.FechaModificacion <= fechaFin.Value.AddDays(1));
+                query = query.Where(r => r.FechaCreacion <= fechaFin.Value.AddDays(1));
 
-            var resultado = await query.OrderByDescending(h => h.FechaModificacion).ToListAsync();
+            var resultado = await query.OrderByDescending(r => r.FechaCreacion).ToListAsync();
 
-            return resultado.Select(h => new HistorialComparativoDto
+            return resultado.Select(r => new RecetaHistorialDto
             {
-                IdHistorial = h.IdHistorial,
-                Celda = h.Celda,
-                Salida = h.Salida,
-                Parametro = h.Parametro,
-                ValorAnterior = $"Mín: {h.MinAnterior} | Máx: {h.MaxAnterior}",
-                ValorNuevo = $"Mín: {h.MinNuevo} | Máx: {h.MaxNuevo}",
-                Fecha = h.FechaModificacion.ToString("yyyy-MM-dd HH:mm:ss"),
-                Usuario = h.Usuario
+                IdReferencia = r.IdReferencia,
+                Celda = r.IdMaquina == 3 ? "CELDA-03" : "CELDA-01",
+                Salida = r.Salida,
+                Parametro = r.Parametro,
+                MinVal = r.MinVal,
+                MaxVal = r.MaxVal,
+                FechaRegistro = r.FechaCreacion.ToString("yyyy-MM-dd HH:mm:ss"),
+                ModificadoPor = r.ModificadoPor,
+                EstatusRegistro = r.Estado ? "ACTIVO (ACTUAL)" : "INHABILITADO (ANTERIOR)"
             });
         }
     }
