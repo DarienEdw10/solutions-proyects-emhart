@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "Ow3loHPxzhM=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\darijim1\\Documents\\enhartt\\Enhartt.Domain\\Enhartt.Domain.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\darijim1\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.29\\microsoft.netcore.app.ref.8.0.29.nupkg.sha512",
+    "C:\\Users\\darijim1\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.29\\microsoft.windowsdesktop.app.ref.8.0.29.nupkg.sha512",
+    "C:\\Users\\darijim1\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.29\\microsoft.aspnetcore.app.ref.8.0.29.nupkg.sha512"
+  ],
+  "logs": []
+}

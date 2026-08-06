@@ -1,0 +1,6 @@
+@Enhartt.Api_HostAddress = http://localhost:5240
+
+GET {{Enhartt.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
