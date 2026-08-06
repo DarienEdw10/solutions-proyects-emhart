@@ -5,5 +5,5 @@
     "timeout_puerto": 0.5,
     "limite_fallas_consecutivas": 3,
     "archivo_respaldo": "respaldo_tucker.csv",
-    "cadena_conexion_bd": "DRIVER={ODBC Driver 17 for SQL Server};SERVER=DESKTOP-D946QNA\\SQLEXPRESS;DATABASE=emh;Trusted_Connection=yes;"
+   "cadena_conexion_bd": "DRIVER={ODBC Driver 17 for SQL Server};SERVER=ATKSV048\\SQLDEV;DATABASE=Autotek.VIPTRA;UID=atkviptra;PWD=oTN#8X$G;Encrypt=no;TrustServerCertificate=yes;"
 }

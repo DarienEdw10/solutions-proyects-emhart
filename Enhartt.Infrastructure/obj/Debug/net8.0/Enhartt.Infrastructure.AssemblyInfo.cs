@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Enhartt.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e2319348de5f58e6cfc5edacf2bf66a18b3efc77")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9f4959df66b7e6cb6041449b111f345cc6f0e234")]
 [assembly: System.Reflection.AssemblyProductAttribute("Enhartt.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Enhartt.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

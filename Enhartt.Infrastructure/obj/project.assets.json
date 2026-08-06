@@ -1481,6 +1481,9 @@
       "Enhartt.Domain/1.0.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore.SqlServer": "8.0.11"
+        },
         "compile": {
           "bin/placeholder/Enhartt.Domain.dll": {}
         },
@@ -4123,5 +4126,16 @@
         "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.302/PortableRuntimeIdentifierGraph.json"
       }
     }
-  }
+  },
+  "logs": [
+    {
+      "code": "NU1605",
+      "level": "Error",
+      "message": "Advertencia como error: Degradación del paquete detectada: Microsoft.EntityFrameworkCore.SqlServer de 8.0.11 a 8.0.0. Haga referencia al paquete directamente desde el proyecto para seleccionar una versión diferente. \r\n Enhartt.Infrastructure -> Enhartt.Domain -> Microsoft.EntityFrameworkCore.SqlServer (>= 8.0.11) \r\n Enhartt.Infrastructure -> Microsoft.EntityFrameworkCore.SqlServer (>= 8.0.0)",
+      "libraryId": "Microsoft.EntityFrameworkCore.SqlServer",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    }
+  ]
 }

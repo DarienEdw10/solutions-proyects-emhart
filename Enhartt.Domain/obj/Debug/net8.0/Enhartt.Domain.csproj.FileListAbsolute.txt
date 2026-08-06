@@ -10,3 +10,4 @@ C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Doma
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\refint\Enhartt.Domain.dll
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.pdb
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\ref\Enhartt.Domain.dll
+C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.csproj.AssemblyReference.cache

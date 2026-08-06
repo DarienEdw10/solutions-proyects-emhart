@@ -115,8 +115,6 @@ C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\runtimes\win\li
 C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Security.Cryptography.ProtectedData.dll
 C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Windows.Extensions.dll
 C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Enhartt.Domain.dll
-C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Enhartt.Infrastructure.dll
-C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Enhartt.Infrastructure.pdb
 C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Enhartt.Domain.pdb
 C:\Users\darijim1\Documents\enhartt\Enhartt.Api\obj\Debug\net8.0\Enhartt.Api.csproj.AssemblyReference.cache
 C:\Users\darijim1\Documents\enhartt\Enhartt.Api\obj\Debug\net8.0\rpswa.dswa.cache.json
@@ -142,3 +140,10 @@ C:\Users\darijim1\Documents\enhartt\Enhartt.Api\obj\Debug\net8.0\refint\Enhartt.
 C:\Users\darijim1\Documents\enhartt\Enhartt.Api\obj\Debug\net8.0\Enhartt.Api.pdb
 C:\Users\darijim1\Documents\enhartt\Enhartt.Api\obj\Debug\net8.0\Enhartt.Api.genruntimeconfig.cache
 C:\Users\darijim1\Documents\enhartt\Enhartt.Api\obj\Debug\net8.0\ref\Enhartt.Api.dll
+C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Microsoft.Extensions.Caching.Memory.dll
+C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
+C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
+C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
+C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\System.ClientModel.dll

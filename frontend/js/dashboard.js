@@ -4,25 +4,79 @@ let datosActualesFiltrados = [];
 let miGraficaChart = null;
 let modalDetalleBS = null;
 
-// Configuración de Paginación
+// Configuración de Paginación en Servidor
 let paginaActual = 1;
 const registrosPorPagina = 5;
 
-// URL base de tu API en .NET 8
+// URLs base de tu API en .NET 8
 const API_URL = "http://localhost:5240/api/parametros";
+const API_KPIS_URL = "http://localhost:5240/api/parametros/kpis";
 
 // =====================================================================
-// CONSUMO DE LA API EN .NET 8
+// CONSUMO DE KPIS Y TARJETAS EN TIEMPO REAL
 // =====================================================================
-async function obtenerDatosAPI() {
+async function obtenerKPIsAPI() {
     try {
-        const respuesta = await fetch(API_URL);
+        const respuesta = await fetch(API_KPIS_URL);
+        if (!respuesta.ok) throw new Error(`Error HTTP KPI: ${respuesta.status}`);
+
+        const data = await respuesta.json();
+
+        // 1. Actualizar Tarjetas KPI principales
+        const elTotal = document.getElementById("lbl-total-disparos");
+        const elOk = document.getElementById("lbl-calidad-ok");
+        const elNok = document.getElementById("lbl-desviaciones-nok");
+        const elFtt = document.getElementById("lbl-efectividad-ftt");
+
+        if (elTotal) elTotal.innerText = data.totalDisparos.toLocaleString();
+        if (elOk) elOk.innerText = data.calidadOk.toLocaleString();
+        if (elNok) elNok.innerText = data.desviacionesNok.toLocaleString();
+        if (elFtt) elFtt.innerText = `${data.efectividadFtt}%`;
+
+        // 2. Actualizar Tiempos Relativos y Estatus de Celdas
+        const elTiempoC1 = document.getElementById("lbl-tiempo-celda-1");
+        const elTiempoC3 = document.getElementById("lbl-tiempo-celda-3");
+        const elBadgeC1 = document.getElementById("badge-estatus-celda-1");
+        const elBadgeC3 = document.getElementById("badge-estatus-celda-3");
+
+        if (elTiempoC1) elTiempoC1.innerText = `Último disparo: ${data.ultimoDisparoCelda1}`;
+        if (elTiempoC3) elTiempoC3.innerText = `Último disparo: ${data.ultimoDisparoCelda3}`;
+
+        if (elBadgeC1) {
+            elBadgeC1.innerText = data.estatusCelda1;
+            elBadgeC1.className = data.estatusCelda1.includes("OPERANDO") 
+                ? "badge bg-success" 
+                : "badge bg-warning text-dark";
+        }
+
+        if (elBadgeC3) {
+            elBadgeC3.innerText = data.estatusCelda3;
+            elBadgeC3.className = data.estatusCelda3.includes("OPERANDO") 
+                ? "badge bg-success" 
+                : "badge bg-warning text-dark";
+        }
+
+    } catch (error) {
+        console.error("Error al obtener KPIs:", error);
+    }
+}
+
+// =====================================================================
+// CONSUMO ASÍNCRONO DE REGISTROS PAGINADOS DESDE SERVIDOR
+// =====================================================================
+async function obtenerDatosAPI(pagina = 1) {
+    try {
+        const urlPaginada = `${API_URL}?pagina=${pagina}&tamano=${registrosPorPagina}`;
+        const respuesta = await fetch(urlPaginada);
         if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
 
-        datosCompletosAPI = await respuesta.json();
+        const resultadoPaginado = await respuesta.json();
         
-        // Renderizar la tabla con los datos reales de SQL Server / API
-        aplicarFiltros();
+        // Elementos devueltos por la API para la página actual
+        datosCompletosAPI = resultadoPaginado.elementos;
+        
+        // Renderizar la tabla con la respuesta paginada de SQL Server
+        renderizarTablaServidor(resultadoPaginado);
     } catch (error) {
         console.error("Error al conectar con la API:", error);
         document.getElementById("tabla-body").innerHTML = `
@@ -36,27 +90,23 @@ async function obtenerDatosAPI() {
 }
 
 // =====================================================================
-// RENDERIZADO DE TABLA + PAGINACIÓN + BUSCADOR
+// RENDERIZADO DE TABLA + INDICADORES DE PAGINACIÓN ASÍNCRONA
 // =====================================================================
-function renderizarTabla(datos) {
+function renderizarTablaServidor(respuestaPaginada) {
+    const datos = respuestaPaginada.elementos;
     datosActualesFiltrados = datos;
+
     const tbody = document.getElementById("tabla-body");
     tbody.innerHTML = "";
 
-    // Paginación Lógica
-    const totalRegistros = datos.length;
-    const totalPaginas = Math.ceil(totalRegistros / registrosPorPagina) || 1;
+    const totalRegistros = respuestaPaginada.totalRegistros;
+    const totalPaginas = respuestaPaginada.totalPaginas;
+    paginaActual = respuestaPaginada.paginaActual;
 
-    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
-
-    const inicio = (paginaActual - 1) * registrosPorPagina;
-    const fin = inicio + registrosPorPagina;
-    const datosPagina = datos.slice(inicio, fin);
-
-    if (datosPagina.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-muted">No se encontraron registros que coincidan con los filtros.</td></tr>`;
+    if (datos.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-muted">No se encontraron registros en la base de datos.</td></tr>`;
     } else {
-        datosPagina.forEach((row) => {
+        datos.forEach((row) => {
             const tr = document.createElement("tr");
             tr.style.cursor = "pointer";
             if (row.estatus === "NOK") tr.classList.add("fila-nok");
@@ -88,11 +138,17 @@ function renderizarTabla(datos) {
         });
     }
 
-    // Actualizar indicador de paginación
-    document.getElementById("lbl-paginacion-info").innerText = `Mostrando ${totalRegistros === 0 ? 0 : inicio + 1}-${Math.min(fin, totalRegistros)} de ${totalRegistros} registros`;
+    // Calculamos el inicio y fin visible según la página solicitada al servidor
+    const inicio = totalRegistros === 0 ? 0 : ((paginaActual - 1) * registrosPorPagina) + 1;
+    const fin = Math.min(inicio + datos.length - 1, totalRegistros);
+
+    // Actualizar indicador textual de paginación
+    document.getElementById("lbl-paginacion-info").innerText = `Mostrando ${inicio}-${fin} de ${totalRegistros} registros`;
+    
+    // Dibujar la paginación dinámica
     renderizarPaginadorUI(totalPaginas);
 
-    // Actualizar gráfica de control con los datos visibles/filtrados
+    // Actualizar gráfica de control con los datos recuperados
     inicializarGrafica(datos);
 }
 
@@ -110,13 +166,14 @@ function renderizarPaginadorUI(totalPaginas) {
     }
 }
 
-function cambiarPagina(num) {
-    paginaActual = num;
-    renderizarTabla(datosActualesFiltrados);
+// Cambio de página que desencadena una nueva petición asíncrona a .NET 8
+async function cambiarPagina(num) {
+    if (num === paginaActual) return;
+    await obtenerDatosAPI(num);
 }
 
 // =====================================================================
-// FILTRADO GLOBAL EN TIEMPO REAL
+// FILTRADO GLOBAL SOBRE LOS REGISTROS RECUPERADOS
 // =====================================================================
 function aplicarFiltros() {
     const celda = document.getElementById("filtro-celda").value;
@@ -138,8 +195,40 @@ function aplicarFiltros() {
         return matchCelda && matchEstatus && matchTurno && matchBusqueda;
     });
 
-    paginaActual = 1;
-    renderizarTabla(filtrados);
+    // Renderizado local del conjunto filtrado de la página
+    const tbody = document.getElementById("tabla-body");
+    tbody.innerHTML = "";
+
+    if (filtrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-muted">No se encontraron coincidencias en los datos de la página actual.</td></tr>`;
+    } else {
+        filtrados.forEach((row) => {
+            const tr = document.createElement("tr");
+            tr.style.cursor = "pointer";
+            if (row.estatus === "NOK") tr.classList.add("fila-nok");
+
+            const badgeCalidad = row.estatus === "OK" 
+                ? `<span class="badge bg-success">🟢 OK</span>` 
+                : `<span class="badge bg-danger">🔴 NOK</span>`;
+
+            tr.innerHTML = `
+                <td><small>${row.fecha}</small></td>
+                <td><span class="badge bg-secondary">${row.celda}</span></td>
+                <td><span class="badge bg-dark">${row.salida}</span></td>
+                <td><span class="badge bg-light text-dark border">${row.turno}</span></td>
+                <td><strong>#${row.numSol}</strong></td>
+                <td>${row.corriente} A</td>
+                <td>${row.energia} J</td>
+                <td>${row.tiempo} ms</td>
+                <td>${row.penetracion} mm</td>
+                <td>${badgeCalidad}</td>
+                <td>${row.detalles ? `<small class="text-danger fw-bold">${row.detalles}</small>` : '-'}</td>
+            `;
+
+            tr.addEventListener("click", () => abrirFichaTecnica(row));
+            tbody.appendChild(tr);
+        });
+    }
 }
 
 // =====================================================================
@@ -250,5 +339,6 @@ function exportarPDF() {
 // Inicialización
 document.addEventListener("DOMContentLoaded", () => {
     modalDetalleBS = new bootstrap.Modal(document.getElementById('modalDetalleSoldadura'));
-    obtenerDatosAPI();
+    obtenerKPIsAPI();
+    obtenerDatosAPI(1); // Cargar página 1 por defecto al iniciar
 });

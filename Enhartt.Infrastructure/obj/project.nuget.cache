@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "dgSpecHash": "3gPDLoWZDM8=",
-  "success": true,
+  "dgSpecHash": "89y/ASBcZT4=",
+  "success": false,
   "projectFilePath": "C:\\Users\\darijim1\\Documents\\enhartt\\Enhartt.Infrastructure\\Enhartt.Infrastructure.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\darijim1\\.nuget\\packages\\azure.core\\1.25.0\\azure.core.1.25.0.nupkg.sha512",
@@ -83,5 +83,17 @@
     "C:\\Users\\darijim1\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.29\\microsoft.windowsdesktop.app.ref.8.0.29.nupkg.sha512",
     "C:\\Users\\darijim1\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.29\\microsoft.aspnetcore.app.ref.8.0.29.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1605",
+      "level": "Error",
+      "message": "Advertencia como error: Degradación del paquete detectada: Microsoft.EntityFrameworkCore.SqlServer de 8.0.11 a 8.0.0. Haga referencia al paquete directamente desde el proyecto para seleccionar una versión diferente. \r\n Enhartt.Infrastructure -> Enhartt.Domain -> Microsoft.EntityFrameworkCore.SqlServer (>= 8.0.11) \r\n Enhartt.Infrastructure -> Microsoft.EntityFrameworkCore.SqlServer (>= 8.0.0)",
+      "projectPath": "C:\\Users\\darijim1\\Documents\\enhartt\\Enhartt.Infrastructure\\Enhartt.Infrastructure.csproj",
+      "filePath": "C:\\Users\\darijim1\\Documents\\enhartt\\Enhartt.Infrastructure\\Enhartt.Infrastructure.csproj",
+      "libraryId": "Microsoft.EntityFrameworkCore.SqlServer",
+      "targetGraphs": [
+        "net8.0"
+      ]
+    }
+  ]
 }

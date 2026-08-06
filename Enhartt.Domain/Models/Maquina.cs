@@ -30,12 +30,12 @@ namespace Enhartt.Domain.Models
         public string? Modelo { get; set; }
 
         [Column("FechaCreacion")]
-        public DateTime? FechaCreacion { get; set; }
+        public DateTime FechaCreacion { get; set; }
 
         [Column("FechaModificacion")]
         public DateTime? FechaModificacion { get; set; }
 
         [Column("Activo")]
-        public int? Activo { get; set; }
+        public bool Activo { get; set; }
     }
 }

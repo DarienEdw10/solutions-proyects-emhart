@@ -1,5 +1,4 @@
 <Solution>
   <Project Path="Enhartt.Api/Enhartt.Api.csproj" />
   <Project Path="Enhartt.Domain/Enhartt.Domain.csproj" />
-  <Project Path="Enhartt.Infrastructure/Enhartt.Infrastructure.csproj" />
 </Solution>

@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Enhartt.Domain.Models;
-using Enhartt.Infrastructure.Data;
+using Enhartt.Api.Services;
 
 namespace Enhartt.Api.Controllers
 {
@@ -9,47 +7,34 @@ namespace Enhartt.Api.Controllers
     [ApiController]
     public class ParametrosController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IParametroService _parametroService;
 
-        public ParametrosController(AppDbContext context)
+        public ParametrosController(IParametroService parametroService)
         {
-            _context = context;
+            _parametroService = parametroService;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetParametros()
+        public async Task<IActionResult> GetParametros([FromQuery] int pagina = 1, [FromQuery] int tamano = 5)
         {
             try
             {
-                var resultado = await (from p in _context.Parametros.AsNoTracking()
-                                       join m in _context.Maquinas.AsNoTracking() 
-                                       on p.IdentificadorId equals m.Id into joinMaq
-                                       from m in joinMaq.DefaultIfEmpty()
-                                       orderby p.IdentificadorId descending
-                                       select new
-                                       {
-                                           fecha = p.Fecha.HasValue ? p.Fecha.Value.ToString("yyyy-MM-dd HH:mm:ss") : "",
-                                           celda = m != null ? m.IdMaquina.ToUpper() : "CELDA-01",
-                                           salida = $"Out {p.Salida ?? 1}",
-                                           programa = p.Programa ?? 1,
-                                           numSol = p.NumSol ?? 0,
-                                           corriente = p.Corriente ?? 0,
-                                           energia = p.Energia ?? 0,
-                                           tiempo = p.Tiempo ?? 0,
-                                           penetracion = p.Penetracion ?? 0,
-                                           volArc = p.VolArc ?? 0,
-                                           volPri = p.VolPri ?? 0,
-                                           elevacion = p.Elevacion ?? 0,
-                                           caida = p.Caida ?? 0,
-                                           lonPer = p.LonPer ?? 0,
-                                           estatus = (p.EstatusCalidad ?? "OK").ToUpper() == "OK" ? "OK" : "NOK",
-                                           detalles = p.DetallesFallas ?? "",
-                                           turno = "Turno 1"
-                                       })
-                                       .Take(100)
-                                       .ToListAsync();
-
+                var resultado = await _parametroService.ObtenerParametrosPaginadosAsync(pagina, tamano);
                 return Ok(resultado);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("kpis")]
+        public async Task<IActionResult> GetKpis()
+        {
+            try
+            {
+                var kpis = await _parametroService.ObtenerResumenKpisAsync();
+                return Ok(kpis);
             }
             catch (Exception ex)
             {

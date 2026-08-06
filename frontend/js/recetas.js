@@ -77,7 +77,7 @@ function confirmarGuardado() {
 }
 
 // =====================================================================
-// GUARDADO Y ENVÍO A LA API
+// GUARDADO Y ENVÍO DEL HISTORIAL
 // =====================================================================
 async function guardarReceta() {
     modalConfirm.hide();
@@ -87,31 +87,42 @@ async function guardarReceta() {
     const fechaActual = obtenerFechaActualFormateada();
 
     const params = (recetasBD[celda] && recetasBD[celda][salida]) ? recetasBD[celda][salida] : [];
-    const datosModificados = [];
+    const listaAuditoria = [];
 
     params.forEach((row, index) => {
         const minVal = parseFloat(document.getElementById(`min-${index}`).value);
         const maxVal = parseFloat(document.getElementById(`max-${index}`).value);
 
+        // Detectar si hubo cambios respecto al valor anterior
         if (row.min !== minVal || row.max !== maxVal) {
+            listaAuditoria.push({
+                Parametro: row.parametro,
+                MinAnterior: row.min,
+                MaxAnterior: row.max,
+                MinNuevo: minVal,
+                MaxNuevo: maxVal,
+                Usuario: "Usuario_Web"
+            });
+
             row.min = minVal;
             row.max = maxVal;
             row.fechaMod = fechaActual;
             row.usuario = "Usuario_Web";
-            datosModificados.push(row);
         }
     });
 
-    // Envío asíncrono si hay cambios
-    if (datosModificados.length > 0) {
+    // Envío asíncrono hacia el endpoint de auditoría si se detectaron modificaciones
+    if (listaAuditoria.length > 0) {
         try {
-            await fetch(API_RECETAS_URL, {
+            await fetch(`${API_RECETAS_URL}/guardar`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ celda, salida, parametros: datosModificados })
+                body: JSON.stringify({ celda, salida, cambios: listaAuditoria })
             });
+            // Refrescar automáticamente la tabla de auditoría
+            cargarHistorialAuditoria();
         } catch (err) {
-            console.warn("Sin conexión con el servidor para actualizar base de datos real. Cambios guardados localmente.", err);
+            console.warn("Sin conexión con el servidor para guardar el historial en SQL Server.", err);
         }
     }
 
@@ -119,6 +130,46 @@ async function guardarReceta() {
 
     document.getElementById("toast-mensaje").innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>¡Receta actualizada con fecha ${fechaActual}!`;
     toastOk.show();
+}
+
+// =====================================================================
+// CONSULTA DE HISTORIAL Y COMPARATIVA DE AUDITORÍA
+// =====================================================================
+async function cargarHistorialAuditoria() {
+    const celda = document.getElementById("select-receta-celda").value;
+    const fInicio = document.getElementById("filtro-fecha-inicio").value;
+    const fFin = document.getElementById("filtro-fecha-fin").value;
+
+    const url = `${API_RECETAS_URL}/historial?celda=${celda}&fechaInicio=${fInicio}&fechaFin=${fFin}`;
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
+
+        const datos = await res.json();
+        const tbody = document.getElementById("tabla-historial-body");
+        tbody.innerHTML = "";
+
+        if (datos.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">No hay cambios registrados dentro del rango de fechas seleccionado.</td></tr>`;
+            return;
+        }
+
+        datos.forEach(h => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><small class="font-monospace">${h.fecha}</small></td>
+                <td><span class="badge bg-secondary">${h.celda} - ${h.salida}</span></td>
+                <td><strong>${h.parametro}</strong></td>
+                <td><span class="badge bg-danger text-wrap">${h.valorAnterior}</span></td>
+                <td><span class="badge bg-success text-wrap">${h.valorNuevo}</span></td>
+                <td><small class="badge bg-light text-dark border">${h.usuario}</small></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (e) {
+        console.warn("No se pudo obtener el historial de auditoría desde la API.", e);
+    }
 }
 
 // Inicialización

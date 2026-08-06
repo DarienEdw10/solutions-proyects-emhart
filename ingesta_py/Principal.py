@@ -1,10 +1,11 @@
-#CODIGO YA FUNCIONANDO LAS SALIDAS, LA MAQUINA 1 Y 3#  from datetime import datetime
+# CODIGO YA FUNCIONANDO LAS SALIDAS, LA MAQUINA 1 Y 3
+from datetime import datetime
 import logging
 import os
 import time
 import pandas as pd
 import serial
-from conector import ConectorSQLServer
+from conexion import ConectorSQLServer
 
 # =====================================================================
 # CONFIGURACIÓN DEL SISTEMA DE LOGGING
@@ -28,12 +29,15 @@ ARCHIVO_RESPALDO = "respaldo_tucker.csv"
 ARCHIVO_ID_LOCAL = "maquina_id.txt"
 LIMITE_FALLAS_CONSECUTIVAS = 3
 
-# Cadena de conexión para la base de datos 'emh'
+# Cadena de conexión actualizada para el servidor de planta SQLDEV
 CADENA_CONEXION_BD = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
-    "SERVER=DESKTOP-D946QNA\\SQLEXPRESS;"
-    "DATABASE=emh;"
-    "Trusted_Connection=yes;"
+    "SERVER=ATKSV048\\SQLDEV;"
+    "DATABASE=Autotek.VIPTRA;"
+    "UID=atkviptra;"
+    "PWD=oTN#8X$G;"
+    "Encrypt=no;"
+    "TrustServerCertificate=yes;"
 )
 
 MAPEO_LINEAS = {
@@ -73,7 +77,7 @@ class ProcesadorTramasIndustriales:
 
         self.bd = ConectorSQLServer(
             connection_string=self.conexion_bd,
-            table_name="emh.emhart.parametros",
+            table_name="emhart.parametros",
         )
         self.bd_conectada = False
 
@@ -109,8 +113,8 @@ class ProcesadorTramasIndustriales:
         try:
             query = """
                 SELECT rt.salida, rt.parametro, rt.min_val, rt.max_val 
-                FROM emh.emhart.referencia_tolerancia rt
-                INNER JOIN emh.emhart.maquinas m ON rt.id_maquina = m.Id
+                FROM emhart.referencia_tolerancia rt
+                INNER JOIN emhart.maquinas m ON rt.id_maquina = m.Id
                 WHERE m.IdMaquina = ? AND rt.estado = 1
             """
 
@@ -248,13 +252,12 @@ class ProcesadorTramasIndustriales:
                 elevacion = 1.09
 
         else:
-            # -----------------------------------------------------------------
+             # -----------------------------------------------------------------
             # REGISTROS MÁQUINA 1 (CELDA-01) - DINÁMICO
             # -----------------------------------------------------------------
             vol_pri = round((int(valores[48]) + int(valores[49]) * 256) / 10.0, 1) if len(valores) > 49 else 0
             vol_arc = round((int(valores[44]) + int(valores[45]) * 256) / 10.0, 1) if len(valores) > 45 else 0
-
-            # Corriente Celda 1
+             # Corriente Celda 1
             corr_raw = int(valores[60]) + int(valores[61]) * 256 if len(valores) > 61 else 0
             if 1200 <= corr_raw <= 1350:
                 corriente = corr_raw
@@ -264,8 +267,7 @@ class ProcesadorTramasIndustriales:
 
             tiempo = round((int(valores[42]) + int(valores[43]) * 256) / 10.0, 1) if len(valores) > 43 else 0
             energia = int(valores[64]) + int(valores[65]) * 256 if len(valores) > 65 else 0
-
-            # Penetración Dinámica para Celda 1 (Elimina los -2.0 mm estáticos)
+             # Penetración Dinámica para Celda 1 (Elimina los -2.0 mm estáticos)
             pen_raw = int(valores[85]) + int(valores[86]) * 256 if len(valores) > 86 else 0
             if pen_raw >= 32768:
                 pen_raw -= 65536
