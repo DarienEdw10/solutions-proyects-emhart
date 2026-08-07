@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Enhartt.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cd9a445967322c0095e1fd4b447358ed6863d461")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bda7afc05ebc4af907d7c8b18bf4b835945e72e6")]
 [assembly: System.Reflection.AssemblyProductAttribute("Enhartt.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Enhartt.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

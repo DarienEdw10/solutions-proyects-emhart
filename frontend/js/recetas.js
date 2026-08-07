@@ -1,13 +1,16 @@
 // URL base de la API de Recetas / Tolerancias en .NET 8
 const API_RECETAS_URL = "http://localhost:5240/api/recetas";
+const API_MAQUINAS_URL = "http://localhost:5240/api/maquinas";
 
 let parametrosActuales = [];
 let modalConfirm = null;
 let toastOk = null;
 
-// Convertir selector a ID de máquina (CELDA-03 -> 3, CELDA-01 -> 1)
+// Extraer dinámicamente el número entero de la celda ("CELDA-02" -> 2, "CELDA-03" -> 3)
 function obtenerIdMaquina(valorSelect) {
-    return valorSelect === "CELDA-03" ? 3 : 1;
+    if (!valorSelect) return 1;
+    const match = valorSelect.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 1;
 }
 
 // Extraer el número entero de la salida ("Out 3" -> 3)
@@ -18,11 +21,70 @@ function obtenerNumeroSalida(valorSelect) {
 }
 
 // =====================================================================
+// CONSUMO DE CATÁLOGOS DINÁMICOS DESDE LA BASE DE DATOS
+// =====================================================================
+async function cargarCeldasYSalidasDinamicas() {
+    const selectCelda = document.getElementById("select-receta-celda");
+    if (!selectCelda) return;
+
+    try {
+        const res = await fetch(API_MAQUINAS_URL);
+        if (!res.ok) throw new Error(`HTTP: ${res.status}`);
+
+        const celdas = await res.json();
+        selectCelda.innerHTML = "";
+
+        celdas.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c.nombreCelda;
+            opt.textContent = c.nombreCelda;
+            selectCelda.appendChild(opt);
+        });
+
+        // Cargar las salidas correspondientes a la celda seleccionada por defecto
+        await cargarSalidasPorCelda();
+    } catch (e) {
+        console.warn("Error al cargar celdas dinámicas en recetas.", e);
+        obtenerRecetasAPI();
+        cargarHistorialAuditoria();
+    }
+}
+
+async function cargarSalidasPorCelda() {
+    const celdaStr = document.getElementById("select-receta-celda")?.value || "CELDA-01";
+    const selectSalida = document.getElementById("select-receta-salida");
+    if (!selectSalida) return;
+
+    const idMaquina = obtenerIdMaquina(celdaStr);
+
+    try {
+        const res = await fetch(`${API_MAQUINAS_URL}/salidas?maquina=${idMaquina}`);
+        if (!res.ok) throw new Error(`HTTP: ${res.status}`);
+
+        const salidas = await res.json();
+        selectSalida.innerHTML = "";
+
+        salidas.forEach(s => {
+            const opt = document.createElement("option");
+            opt.value = s.texto;
+            opt.textContent = s.texto;
+            selectSalida.appendChild(opt);
+        });
+
+        // Al terminar de poblar las salidas, refrescar los parámetros activos
+        obtenerRecetasAPI();
+    } catch (e) {
+        console.warn("Error al cargar salidas dinámicas.", e);
+        obtenerRecetasAPI();
+    }
+}
+
+// =====================================================================
 // CONSUMO DE RECETAS ACTIVAS DESDE LA API (estado = true)
 // =====================================================================
 async function obtenerRecetasAPI() {
     const celdaStr = document.getElementById("select-receta-celda")?.value || "CELDA-01";
-    const salidaStr = document.getElementById("select-receta-salida")?.value || "Out 3";
+    const salidaStr = document.getElementById("select-receta-salida")?.value || "Out 1";
 
     const idMaquina = obtenerIdMaquina(celdaStr);
     const numSalida = obtenerNumeroSalida(salidaStr);
@@ -56,7 +118,6 @@ function cargarRecetaSeleccionada() {
         return;
     }
 
-    // Buscar la fecha más reciente
     const ultimasFechas = parametrosActuales
         .map(p => p.fechaModificacion || p.fechaCreacion || p.FechaModificacion || p.FechaCreacion)
         .filter(f => f)
@@ -70,7 +131,6 @@ function cargarRecetaSeleccionada() {
     parametrosActuales.forEach((row, index) => {
         const tr = document.createElement("tr");
         
-        // Mapeo flexible para camelCase o PascalCase
         const paramNombre = row.parametro || row.Parametro || "";
         const minVal = row.minVal ?? row.MinVal ?? 0;
         const maxVal = row.maxVal ?? row.MaxVal ?? 0;
@@ -227,17 +287,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (elModal) modalConfirm = new bootstrap.Modal(elModal);
     if (elToast) toastOk = new bootstrap.Toast(elToast);
 
-    // Escuchar cambios en los selectores de celda y salida
-    document.getElementById("select-receta-celda")?.addEventListener("change", () => {
-        obtenerRecetasAPI();
+    // Escuchar cambios en la celda para recargar sus salidas y su historial
+    document.getElementById("select-receta-celda")?.addEventListener("change", async () => {
+        await cargarSalidasPorCelda();
         cargarHistorialAuditoria();
     });
 
+    // Escuchar cambios en la salida para actualizar los parámetros activos
     document.getElementById("select-receta-salida")?.addEventListener("change", () => {
         obtenerRecetasAPI();
     });
 
-    // Carga inicial
-    obtenerRecetasAPI();
+    // Carga inicial dinámica desde SQL Server
+    cargarCeldasYSalidasDinamicas();
     cargarHistorialAuditoria();
 });

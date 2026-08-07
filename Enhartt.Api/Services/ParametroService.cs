@@ -14,7 +14,7 @@ namespace Enhartt.Api.Services
         }
 
         public async Task<ResultadoPaginadoDto<object>> ObtenerParametrosPaginadosAsync(
-            int pagina = 1, 
+            int pagina = 1,
             int registrosPorPagina = 5,
             string? celda = null,
             string? estatus = null,
@@ -55,7 +55,7 @@ namespace Enhartt.Api.Services
             // 4. Búsqueda Rápida Parcial
             if (!string.IsNullOrEmpty(busqueda))
             {
-                query = query.Where(p => (p.NumSol != null && p.NumSol.ToString().Contains(busqueda)) ||
+                query = query.Where(p => (p.NumSol.HasValue && EF.Functions.Like(p.NumSol.Value.ToString(), $"%{busqueda}%")) ||
                                          (p.DetallesFallas != null && p.DetallesFallas.Contains(busqueda)) ||
                                          (p.Linea != null && p.Linea.Contains(busqueda)));
             }

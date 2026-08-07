@@ -10,6 +10,33 @@ const registrosPorPagina = 5;
 // URLs base de la API en .NET 8
 const API_URL = "http://localhost:5240/api/parametros";
 const API_KPIS_URL = "http://localhost:5240/api/parametros/kpis";
+const API_MAQUINAS_URL = "http://localhost:5240/api/maquinas";
+
+// =====================================================================
+// CONSUMO DE CATÁLOGOS DINÁMICOS
+// =====================================================================
+async function cargarCatalogoCeldasDashboard() {
+    const selectCelda = document.getElementById("filtro-celda");
+    if (!selectCelda) return;
+
+    try {
+        const res = await fetch(API_MAQUINAS_URL);
+        if (!res.ok) throw new Error(`HTTP: ${res.status}`);
+
+        const maquinas = await res.json();
+        
+        selectCelda.innerHTML = `<option value="">-- Todas --</option>`;
+
+        maquinas.forEach(m => {
+            const opt = document.createElement("option");
+            opt.value = m.nombreCelda;
+            opt.textContent = m.nombreCelda;
+            selectCelda.appendChild(opt);
+        });
+    } catch (e) {
+        console.warn("No se pudo obtener el catálogo dinámico de celdas.", e);
+    }
+}
 
 // =====================================================================
 // CONSUMO DE KPIS Y TARJETAS EN TIEMPO REAL
@@ -21,7 +48,6 @@ async function obtenerKPIsAPI() {
 
         const data = await respuesta.json();
 
-        // 1. Actualizar Tarjetas KPI principales
         const elTotal = document.getElementById("lbl-total-disparos");
         const elOk = document.getElementById("lbl-calidad-ok");
         const elNok = document.getElementById("lbl-desviaciones-nok");
@@ -32,7 +58,6 @@ async function obtenerKPIsAPI() {
         if (elNok) elNok.innerText = data.desviacionesNok.toLocaleString();
         if (elFtt) elFtt.innerText = `${data.efectividadFtt}%`;
 
-        // 2. Actualizar Tiempos Relativos y Estatus de Celdas
         const elTiempoC1 = document.getElementById("lbl-tiempo-celda-1");
         const elTiempoC3 = document.getElementById("lbl-tiempo-celda-3");
         const elBadgeC1 = document.getElementById("badge-estatus-celda-1");
@@ -65,14 +90,12 @@ async function obtenerKPIsAPI() {
 // =====================================================================
 async function obtenerDatosAPI(pagina = 1) {
     try {
-        // Capturar valores de los inputs de filtro (Fecha Inicio y Fecha Fin)
         const celda = document.getElementById("filtro-celda")?.value || "";
         const estatus = document.getElementById("filtro-estatus")?.value || "";
         const fechaInicio = document.getElementById("filtro-fecha-inicio")?.value || "";
         const fechaFin = document.getElementById("filtro-fecha-fin")?.value || "";
         const busqueda = document.getElementById("buscador-global")?.value.trim() || "";
 
-        // Construir URL dinámica con Query Parameters
         let queryParams = new URLSearchParams({
             pagina: pagina,
             tamano: registrosPorPagina
@@ -104,13 +127,10 @@ async function obtenerDatosAPI(pagina = 1) {
                 </td>
             </tr>`;
     }
-    
-
-
 }
 
 // =====================================================================
-// RENDERIZADO DE TABLA Y PAGINADOR ACOTADO (VENTANA DESLIZANTE)
+// RENDERIZADO DE TABLA Y PAGINADOR ACOTADO
 // =====================================================================
 function renderizarTablaServidor(respuestaPaginada) {
     const datos = respuestaPaginada.elementos;
@@ -160,21 +180,16 @@ function renderizarTablaServidor(respuestaPaginada) {
 
     document.getElementById("lbl-paginacion-info").innerText = `Mostrando ${inicio}-${fin} de ${totalRegistros} registros`;
     
-    // Renderizar los botones de paginación de forma acotada
     renderizarPaginadorAcotadoUI(totalPaginas);
-
-    // Actualizar la gráfica con los datos visibles
     inicializarGrafica(datos);
 }
 
-// Renderiza un máximo de 5 números de página más los botones Anterior/Siguiente
 function renderizarPaginadorAcotadoUI(totalPaginas) {
     const ul = document.getElementById("ul-paginacion");
     ul.innerHTML = "";
 
     if (totalPaginas <= 1) return;
 
-    // Botón "Anterior"
     const liAnt = document.createElement("li");
     liAnt.className = `page-item ${paginaActual === 1 ? "disabled" : ""}`;
     liAnt.innerHTML = `<a class="page-link" href="#" onclick="cambiarPagina(${paginaActual - 1}); return false;">&laquo;</a>`;
@@ -213,7 +228,6 @@ function renderizarPaginadorAcotadoUI(totalPaginas) {
         ul.appendChild(crearItemPagina(totalPaginas));
     }
 
-    // Botón "Siguiente"
     const liSig = document.createElement("li");
     liSig.className = `page-item ${paginaActual === totalPaginas ? "disabled" : ""}`;
     liSig.innerHTML = `<a class="page-link" href="#" onclick="cambiarPagina(${paginaActual + 1}); return false;">&raquo;</a>`;
@@ -232,7 +246,6 @@ async function cambiarPagina(num) {
     await obtenerDatosAPI(num);
 }
 
-// Aplicar filtros reiniciando a la página 1
 function aplicarFiltros() {
     paginaActual = 1;
     obtenerDatosAPI(1);
@@ -340,7 +353,6 @@ async function obtenerTodosLosDatosFiltradosAPI() {
     return resultado.elementos;
 }
 
-// EXPORTACIÓN A EXCEL DE TODOS LOS REGISTROS FILTRADOS
 async function exportarExcel() {
     try {
         const datosParaExportar = await obtenerTodosLosDatosFiltradosAPI();
@@ -373,7 +385,6 @@ async function exportarExcel() {
     }
 }
 
-// EXPORTACIÓN A PDF DE TODOS LOS REGISTROS FILTRADOS
 async function exportarPDF() {
     try {
         const datosParaExportar = await obtenerTodosLosDatosFiltradosAPI();
@@ -418,29 +429,30 @@ async function exportarPDF() {
     }
 }
 
-// Inicialización
+// =====================================================================
+// INICIALIZACIÓN Y EVENT LISTENERS
+// =====================================================================
+let debounceTimer = null;
+
 document.addEventListener("DOMContentLoaded", () => {
     modalDetalleBS = new bootstrap.Modal(document.getElementById('modalDetalleSoldadura'));
     
-    // Escuchar el click en el botón de Filtrar Datos y Enter en la caja de búsqueda
+    // Asignar listeners a botones y búsqueda rápida
     document.querySelector("button[onclick='aplicarFiltros()']")?.addEventListener("click", aplicarFiltros);
     document.getElementById("buscador-global")?.addEventListener("keyup", (e) => {
         if (e.key === "Enter") aplicarFiltros();
     });
 
+    document.getElementById("buscador-global")?.addEventListener("input", () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            paginaActual = 1;
+            obtenerDatosAPI(1);
+        }, 350);
+    });
+
+    // Cargar catálogos dinámicos e iniciar datos
+    cargarCatalogoCeldasDashboard();
     obtenerKPIsAPI();
     obtenerDatosAPI(1);
-});
-let debounceTimer = null;
-
-// Escuchar la escritura en tiempo real sobre la caja de Búsqueda Rápida
-document.getElementById("buscador-global")?.addEventListener("input", (e) => {
-    // Cancela la petición anterior si el usuario sigue escribiendo
-    clearTimeout(debounceTimer);
-
-    // Espera 350ms desde la última tecla presionada para ejecutar la búsqueda
-    debounceTimer = setTimeout(() => {
-        paginaActual = 1;
-        obtenerDatosAPI(1);
-    }, 350);
 });
