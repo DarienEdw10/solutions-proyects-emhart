@@ -17,16 +17,19 @@ namespace Enhartt.Api.Controllers
         // GET: api/parametros?pagina=1&tamano=5&celda=CELDA-03&estatus=Solo OK&busqueda=7543
         [HttpGet]
         public async Task<IActionResult> GetParametros(
-            [FromQuery] int pagina = 1, 
-            [FromQuery] int tamano = 5,
-            [FromQuery] string? celda = null,
-            [FromQuery] string? estatus = null,
-            [FromQuery] string? turno = null,
-            [FromQuery] string? busqueda = null)
+           [FromQuery] int pagina = 1,
+           [FromQuery] int tamano = 5,
+           [FromQuery] string? celda = null,
+           [FromQuery] string? estatus = null,
+           [FromQuery] DateTime? fechaInicio = null,
+           [FromQuery] DateTime? fechaFin = null,
+           [FromQuery] string? busqueda = null)
         {
             try
             {
-                var resultado = await _parametroService.ObtenerParametrosPaginadosAsync(pagina, tamano, celda, estatus, turno, busqueda);
+                var resultado = await _parametroService.ObtenerParametrosPaginadosAsync(
+                    pagina, tamano, celda, estatus, fechaInicio, fechaFin, busqueda
+                );
                 return Ok(resultado);
             }
             catch (Exception ex)

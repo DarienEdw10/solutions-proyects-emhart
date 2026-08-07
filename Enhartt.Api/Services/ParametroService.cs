@@ -14,17 +14,17 @@ namespace Enhartt.Api.Services
         }
 
         public async Task<ResultadoPaginadoDto<object>> ObtenerParametrosPaginadosAsync(
-            int pagina = 1,
+            int pagina = 1, 
             int registrosPorPagina = 5,
             string? celda = null,
             string? estatus = null,
-            string? turno = null,
+            DateTime? fechaInicio = null,
+            DateTime? fechaFin = null,
             string? busqueda = null)
         {
-            // Iniciar consulta IQueryable sobre SQL Server
             var query = _context.Parametros.AsNoTracking().AsQueryable();
 
-            // 1. Filtro por Celda (1 = CELDA-01, 3 = CELDA-03)
+            // 1. Filtro por Celda
             if (!string.IsNullOrEmpty(celda) && celda != "-- Todas --")
             {
                 int idMaquina = celda == "CELDA-03" ? 3 : 1;
@@ -40,7 +40,19 @@ namespace Enhartt.Api.Services
                     query = query.Where(p => p.EstatusCalidad != null && p.EstatusCalidad.Trim().ToUpper() != "OK");
             }
 
-            // 3. Filtro por Búsqueda Rápida (Coincidencia parcial en N° Soldadura o Fallas)
+            // 3. Filtro por Rango de Fechas
+            if (fechaInicio.HasValue)
+            {
+                query = query.Where(p => p.Fecha >= fechaInicio.Value.Date);
+            }
+
+            if (fechaFin.HasValue)
+            {
+                var fechaFinInclusive = fechaFin.Value.Date.AddDays(1);
+                query = query.Where(p => p.Fecha < fechaFinInclusive);
+            }
+
+            // 4. Búsqueda Rápida Parcial
             if (!string.IsNullOrEmpty(busqueda))
             {
                 query = query.Where(p => (p.NumSol != null && p.NumSol.ToString().Contains(busqueda)) ||
@@ -48,10 +60,8 @@ namespace Enhartt.Api.Services
                                          (p.Linea != null && p.Linea.Contains(busqueda)));
             }
 
-            // Conteo exacto en SQL Server según los filtros aplicados
             var totalRegistros = await query.CountAsync();
 
-            // Paginación eficiente a nivel SQL (OFFSET y FETCH)
             var datosPaginados = await query.OrderByDescending(p => p.IdRegistro)
                                            .Skip((pagina - 1) * registrosPorPagina)
                                            .Take(registrosPorPagina)
@@ -76,7 +86,6 @@ namespace Enhartt.Api.Services
                 estatus = (p.EstatusCalidad ?? "OK").Trim().ToUpper() == "OK" ? "OK" : "NOK",
                 detalles = p.DetallesFallas ?? "",
                 turno = "T1"
-
             });
 
             return new ResultadoPaginadoDto<object>

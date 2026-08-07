@@ -6,10 +6,11 @@ namespace Enhartt.Api.Services
     {
         Task<ResultadoPaginadoDto<object>> ObtenerParametrosPaginadosAsync(
             int pagina = 1, 
-            int tamano = 5,
+            int registrosPorPagina = 5,
             string? celda = null,
             string? estatus = null,
-            string? turno = null,
+            DateTime? fechaInicio = null,
+            DateTime? fechaFin = null,
             string? busqueda = null);
 
         Task<ResumenKpiDto> ObtenerResumenKpisAsync();

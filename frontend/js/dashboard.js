@@ -65,10 +65,11 @@ async function obtenerKPIsAPI() {
 // =====================================================================
 async function obtenerDatosAPI(pagina = 1) {
     try {
-        // Capturar valores de los inputs de filtro
+        // Capturar valores de los inputs de filtro (Fecha Inicio y Fecha Fin)
         const celda = document.getElementById("filtro-celda")?.value || "";
         const estatus = document.getElementById("filtro-estatus")?.value || "";
-        const turno = document.getElementById("filtro-turno")?.value || "";
+        const fechaInicio = document.getElementById("filtro-fecha-inicio")?.value || "";
+        const fechaFin = document.getElementById("filtro-fecha-fin")?.value || "";
         const busqueda = document.getElementById("buscador-global")?.value.trim() || "";
 
         // Construir URL dinámica con Query Parameters
@@ -79,7 +80,8 @@ async function obtenerDatosAPI(pagina = 1) {
 
         if (celda) queryParams.append("celda", celda);
         if (estatus) queryParams.append("estatus", estatus);
-        if (turno) queryParams.append("turno", turno);
+        if (fechaInicio) queryParams.append("fechaInicio", fechaInicio);
+        if (fechaFin) queryParams.append("fechaFin", fechaFin);
         if (busqueda) queryParams.append("busqueda", busqueda);
 
         const urlPaginada = `${API_URL}?${queryParams.toString()}`;
@@ -102,6 +104,9 @@ async function obtenerDatosAPI(pagina = 1) {
                 </td>
             </tr>`;
     }
+    
+
+
 }
 
 // =====================================================================
@@ -175,7 +180,6 @@ function renderizarPaginadorAcotadoUI(totalPaginas) {
     liAnt.innerHTML = `<a class="page-link" href="#" onclick="cambiarPagina(${paginaActual - 1}); return false;">&laquo;</a>`;
     ul.appendChild(liAnt);
 
-    // Determinar la ventana de botones a mostrar (máximo 5 botones a la vez)
     let maxBotones = 5;
     let inicioVentana = Math.max(1, paginaActual - Math.floor(maxBotones / 2));
     let finVentana = inicioVentana + maxBotones - 1;
@@ -309,34 +313,109 @@ function inicializarGrafica(datos) {
 }
 
 // =====================================================================
-// EXPORTACIONES
+// EXPORTACIONES COMPLETAS
 // =====================================================================
-function exportarExcel() {
-    if (datosCompletosAPI.length === 0) return alert("Sin datos.");
-    const dataExcel = datosCompletosAPI.map(i => ({
-        "Fecha": i.fecha, "Celda": i.celda, "Salida": i.salida, "Turno": i.turno,
-        "N° Soldadura": i.numSol, "Corriente (A)": i.corriente, "Energía (J)": i.energia,
-        "Tiempo (ms)": i.tiempo, "Penetración (mm)": i.penetracion, "Estatus": i.estatus, "Desviaciones": i.detalles || "OK"
-    }));
-    const ws = XLSX.utils.json_to_sheet(dataExcel);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Tucker");
-    XLSX.writeFile(wb, `Reporte_Tucker_${new Date().toISOString().slice(0, 10)}.xlsx`);
+async function obtenerTodosLosDatosFiltradosAPI() {
+    const celda = document.getElementById("filtro-celda")?.value || "";
+    const estatus = document.getElementById("filtro-estatus")?.value || "";
+    const fechaInicio = document.getElementById("filtro-fecha-inicio")?.value || "";
+    const fechaFin = document.getElementById("filtro-fecha-fin")?.value || "";
+    const busqueda = document.getElementById("buscador-global")?.value.trim() || "";
+
+    let queryParams = new URLSearchParams({
+        pagina: 1,
+        tamano: 100000
+    });
+
+    if (celda) queryParams.append("celda", celda);
+    if (estatus) queryParams.append("estatus", estatus);
+    if (fechaInicio) queryParams.append("fechaInicio", fechaInicio);
+    if (fechaFin) queryParams.append("fechaFin", fechaFin);
+    if (busqueda) queryParams.append("busqueda", busqueda);
+
+    const respuesta = await fetch(`${API_URL}?${queryParams.toString()}`);
+    if (!respuesta.ok) throw new Error(`Error HTTP: ${respuesta.status}`);
+
+    const resultado = await respuesta.json();
+    return resultado.elementos;
 }
 
-function exportarPDF() {
-    if (datosCompletosAPI.length === 0) return alert("Sin datos.");
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: "landscape" });
-    doc.text("AUTOTEK MÉXICO - REPORTE CELDAS TUCKER", 14, 15);
-    const filasPDF = datosCompletosAPI.map(i => [i.fecha, i.celda, i.salida, i.turno, `#${i.numSol}`, `${i.corriente} A`, `${i.energia} J`, `${i.tiempo} ms`, `${i.penetracion} mm`, i.estatus, i.detalles || "-"]);
-    doc.autoTable({
-        startY: 22,
-        head: [["Fecha", "Celda", "Salida", "Turno", "N° Sol.", "Corriente", "Energía", "Tiempo", "Penetración", "Estatus", "Desviaciones"]],
-        body: filasPDF,
-        theme: "striped", headStyles: { fillColor: [33, 37, 41] }, styles: { fontSize: 8 }
-    });
-    doc.save(`Reporte_Tucker_${new Date().toISOString().slice(0, 10)}.pdf`);
+// EXPORTACIÓN A EXCEL DE TODOS LOS REGISTROS FILTRADOS
+async function exportarExcel() {
+    try {
+        const datosParaExportar = await obtenerTodosLosDatosFiltradosAPI();
+
+        if (!datosParaExportar || datosParaExportar.length === 0) {
+            return alert("No hay datos disponibles para exportar con los filtros actuales.");
+        }
+
+        const dataExcel = datosParaExportar.map(i => ({
+            "Fecha": i.fecha,
+            "Celda": i.celda,
+            "Salida": i.salida,
+            "Turno": i.turno,
+            "N° Soldadura": i.numSol,
+            "Corriente (A)": i.corriente,
+            "Energía (J)": i.energia,
+            "Tiempo (ms)": i.tiempo,
+            "Penetración (mm)": i.penetracion,
+            "Estatus": i.estatus,
+            "Desviaciones": i.detalles || "OK"
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataExcel);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Tucker");
+        XLSX.writeFile(wb, `Reporte_Tucker_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch (error) {
+        console.error("Error al exportar Excel:", error);
+        alert("Ocurrió un error al generar el archivo Excel.");
+    }
+}
+
+// EXPORTACIÓN A PDF DE TODOS LOS REGISTROS FILTRADOS
+async function exportarPDF() {
+    try {
+        const datosParaExportar = await obtenerTodosLosDatosFiltradosAPI();
+
+        if (!datosParaExportar || datosParaExportar.length === 0) {
+            return alert("No hay datos disponibles para exportar con los filtros actuales.");
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: "landscape" });
+
+        doc.setFontSize(14);
+        doc.text("AUTOTEK MÉXICO - REPORTE CELDAS TUCKER", 14, 15);
+
+        const filasPDF = datosParaExportar.map(i => [
+            i.fecha,
+            i.celda,
+            i.salida,
+            i.turno,
+            `#${i.numSol}`,
+            `${i.corriente} A`,
+            `${i.energia} J`,
+            `${i.tiempo} ms`,
+            `${i.penetracion} mm`,
+            i.estatus,
+            i.detalles || "-"
+        ]);
+
+        doc.autoTable({
+            startY: 22,
+            head: [["Fecha", "Celda", "Salida", "Turno", "N° Sol.", "Corriente", "Energía", "Tiempo", "Penetración", "Estatus", "Desviaciones"]],
+            body: filasPDF,
+            theme: "striped",
+            headStyles: { fillColor: [33, 37, 41] },
+            styles: { fontSize: 8 }
+        });
+
+        doc.save(`Reporte_Tucker_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (error) {
+        console.error("Error al exportar PDF:", error);
+        alert("Ocurrió un error al generar el archivo PDF.");
+    }
 }
 
 // Inicialización
@@ -351,4 +430,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     obtenerKPIsAPI();
     obtenerDatosAPI(1);
+});
+let debounceTimer = null;
+
+// Escuchar la escritura en tiempo real sobre la caja de Búsqueda Rápida
+document.getElementById("buscador-global")?.addEventListener("input", (e) => {
+    // Cancela la petición anterior si el usuario sigue escribiendo
+    clearTimeout(debounceTimer);
+
+    // Espera 350ms desde la última tecla presionada para ejecutar la búsqueda
+    debounceTimer = setTimeout(() => {
+        paginaActual = 1;
+        obtenerDatosAPI(1);
+    }, 350);
 });
