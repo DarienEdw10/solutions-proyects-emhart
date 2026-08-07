@@ -1,22 +1,43 @@
 using System.Linq.Expressions;
+using Enhartt.Domain.Models;
 
 namespace Enhartt.Domain.Repositories
 {
-    public interface IRepository<T> where T : class
+    public interface IRepository 
     {
-        // Lecturas (GET)
-        Task<IEnumerable<T>> GetAllAsync();
-        Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
+        // -------------------------------------------------------------
+        // MÓDULO RECETAS (Tolerancias)
+        // -------------------------------------------------------------
+        Task<IEnumerable<Receta>> ObtenerRecetasPorMaquinaAsync(int idMaquina);
+        Task<Receta?> ActualizarRecetaAsync(Receta receta, string usuario);
+        Task<Receta?> AgregarRecetaAsync(Receta receta, string usuario);
 
-        // Creación (POST)
-        Task AddAsync(T entity);
+        // -------------------------------------------------------------
+        // MÓDULO MAQUINAS (Catálogo Celdas Tucker)
+        // -------------------------------------------------------------
+        Task<IEnumerable<Maquina>> ObtenerMaquinasActivasAsync();
+        Task<Maquina?> ObtenerMaquinaPorIdAsync(string idMaquina);
 
-        // Actualización Completa / Parcial (PUT / PATCH)
-        void Update(T entity);
+        // -------------------------------------------------------------
+        // MÓDULO PARAMETROS (Telemetría Disparos / Ingesta PLC)
+        // -------------------------------------------------------------
+        Task<IEnumerable<Parametro>> ObtenerParametrosPaginadosAsync(
+            int? identificadorId, 
+            string? estatus, 
+            DateTime? fechaInicio, 
+            DateTime? fechaFin, 
+            string? busqueda, 
+            int pagina, 
+            int registrosPorPagina);
 
-        // Confirmación de transacciones
-        Task SaveChangesAsync();
+        Task<int> ContarParametrosTotalAsync(
+            int? identificadorId, 
+            string? estatus, 
+            DateTime? fechaInicio, 
+            DateTime? fechaFin, 
+            string? busqueda);
 
-        // DELETE omitido intencionalmente por políticas de trazabilidad
+        Task<IEnumerable<int>> ObtenerSalidasPorMaquinaAsync(int idMaquina);
+        Task<Parametro?> AgregarParametroIngestaAsync(Parametro parametro);
     }
 }
