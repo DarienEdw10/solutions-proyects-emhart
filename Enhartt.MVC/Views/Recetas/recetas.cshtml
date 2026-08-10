@@ -121,34 +121,47 @@
 
 @section Scripts {
     <script>
+        // Cargar todo el mapa de datos C# estructurado directamente en memoria del cliente
         const celdasData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.Celdas ?? new List<Enhartt.MVC.Models.ViewModels.CeldaViewModel>()));
 
         const selectCelda = document.getElementById('selectCelda');
         const selectSalida = document.getElementById('selectSalida');
+        const tblLimitesBody = document.getElementById('tblLimitesBody');
+        const btnGuardarCambios = document.getElementById('btnGuardarCambios');
+        const lblUltimaMod = document.getElementById('lblUltimaMod');
 
+        // 1. Manejar cambio en la Celda seleccionada
         selectCelda.addEventListener('change', function () {
             const celdaNombre = this.value;
 
             selectSalida.innerHTML = '<option value="">-- Seleccione una Salida / Pistola --</option>';
             selectSalida.disabled = true;
+            limpiarTabla();
 
             if (!celdaNombre) return;
 
-            const celdaEncontrada = celdasData.find(c => c.Celda === celdaNombre);
+            const celdaEncontrada = celdasData.find(c => (c.Celda || c.celda) === celdaNombre);
 
-            if (celdaEncontrada && celdaEncontrada.Maquinas) {
+            if (celdaEncontrada) {
+                const maquinas = celdaEncontrada.Maquinas || celdaEncontrada.maquinas || [];
                 let haySalidas = false;
 
-                celdaEncontrada.Maquinas.forEach(maquina => {
-                    if (maquina.Recetas && maquina.Recetas.length > 0) {
-                        maquina.Recetas.forEach(receta => {
+                maquinas.forEach(maquina => {
+                    const recetas = maquina.Recetas || maquina.recetas || [];
+                    
+                    // Extraer únicamente los números de salidas ÚNICAS (sin duplicar por cada parámetro)
+                    const salidasUnicas = [...new Set(recetas.map(r => String(r.Salida || r.salida)))];
+
+                    salidasUnicas.forEach(numSalida => {
+                        if (numSalida && numSalida !== "undefined") {
                             const option = document.createElement('option');
-                            option.value = receta.Id;
-                            option.textContent = `Salida: ${receta.Salida} (Máquina: ${maquina.IdMaquina})`;
+                            option.value = maquina.Id || maquina.id;
+                            option.dataset.salida = numSalida;
+                            option.textContent = `Salida: ${numSalida} (Máquina: ${maquina.IdMaquina || maquina.idMaquina})`;
                             selectSalida.appendChild(option);
                             haySalidas = true;
-                        });
-                    }
+                        }
+                    });
                 });
 
                 if (haySalidas) {
@@ -156,5 +169,88 @@
                 }
             }
         });
+
+        // 2. Manejar cambio en la Salida seleccionada -> Pinta las filas de parámetros
+        selectSalida.addEventListener('change', function () {
+            const idMaquina = parseInt(this.value, 10);
+            const numSalida = this.options[this.selectedIndex]?.dataset.salida;
+            const celdaNombre = selectCelda.value;
+
+            if (!idMaquina || !numSalida || !celdaNombre) {
+                limpiarTabla();
+                return;
+            }
+
+            const celdaObj = celdasData.find(c => (c.Celda || c.celda) === celdaNombre);
+            const maquinas = celdaObj?.Maquinas || celdaObj?.maquinas || [];
+            const maquinaObj = maquinas.find(m => (m.Id || m.id) === idMaquina);
+            const recetas = maquinaObj?.Recetas || maquinaObj?.recetas || [];
+
+            // Filtrar todos los parámetros pertenecientes a esa salida que estén activos (Estado == true)
+            const parametrosEncontrados = recetas.filter(r => 
+                String(r.Salida || r.salida) === String(numSalida) && 
+                (r.Estado ?? r.estado ?? true)
+            );
+
+            renderizarTabla(parametrosEncontrados);
+        });
+
+        function renderizarTabla(recetas) {
+            if (!recetas || recetas.length === 0) {
+                limpiarTabla();
+                return;
+            }
+
+            tblLimitesBody.innerHTML = '';
+            
+            // Obtener fecha de la última modificación registrada
+            const fechas = recetas
+                .map(r => r.FechaModificacion || r.fechaModificacion)
+                .filter(f => f)
+                .sort()
+                .reverse();
+
+            recetas.forEach((r) => {
+                const tr = document.createElement('tr');
+                
+                const param = r.Parametro || r.parametro || 'Límite Control';
+                const minVal = r.MinVal ?? r.minVal ?? 0;
+                const maxVal = r.MaxVal ?? r.maxVal ?? 0;
+                const fechaRaw = r.FechaModificacion || r.fechaModificacion || '';
+                const modPor = r.ModificadoPor || r.modificadoPor || 'SISTEMA_INICIAL';
+                const estadoBool = r.Estado ?? r.estado ?? true;
+
+                const fechaTxt = fechaRaw ? fechaRaw.toString().replace('T', ' ').slice(0, 19) : 'Sin registro';
+
+                tr.innerHTML = `
+                    <td class="fw-bold text-dark">${param}</td>
+                    <td><span class="badge bg-secondary">Físico</span></td>
+                    <td><input type="number" step="0.01" class="form-control form-control-sm fw-bold border-secondary" value="${minVal}"></td>
+                    <td><input type="number" step="0.01" class="form-control form-control-sm fw-bold border-secondary" value="${maxVal}"></td>
+                    <td><small class="text-muted font-monospace"><i class="bi bi-clock-history me-1"></i>${fechaTxt}</small></td>
+                    <td><span class="badge bg-light text-dark border">${modPor}</span></td>
+                    <td><span class="badge ${estadoBool ? 'bg-success' : 'bg-danger'}">${estadoBool ? '🟢 ACTIVO' : '🔴 INACTIVO'}</span></td>
+                `;
+                tblLimitesBody.appendChild(tr);
+            });
+
+            if (btnGuardarCambios) btnGuardarCambios.disabled = false;
+            if (lblUltimaMod) {
+                lblUltimaMod.innerText = fechas[0] ? fechas[0].toString().replace('T', ' ').slice(0, 19) : new Date().toLocaleTimeString();
+            }
+        }
+
+        function limpiarTabla() {
+            if (tblLimitesBody) {
+                tblLimitesBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            No hay parámetros configurados para la combinación seleccionada.
+                        </td>
+                    </tr>`;
+            }
+            if (btnGuardarCambios) btnGuardarCambios.disabled = true;
+            if (lblUltimaMod) lblUltimaMod.innerText = 'N/A';
+        }
     </script>
 }

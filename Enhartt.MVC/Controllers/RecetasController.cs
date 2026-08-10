@@ -16,12 +16,24 @@ public class RecetasController : Controller
         this.repository = repository;
     }
 
+    [HttpGet]
     public async Task<IActionResult> Index()
     {
-        var maquinas = await enharttService.ObtenerMaquinasAsync();
+        return await CargarVistaRecetasAsync();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Recetas()
+    {
+        return await CargarVistaRecetasAsync();
+    }
+
+    private async Task<IActionResult> CargarVistaRecetasAsync()
+    {
+        var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
         
         var celdas = maquinas
-            .Where(m => m.Celda != null)
+            .Where(m => !string.IsNullOrEmpty(m.Celda))
             .GroupBy(m => m.Celda!)
             .ToDictionary(
                 grp => grp.Key,
@@ -36,38 +48,37 @@ public class RecetasController : Controller
 
             foreach (var maquina in celdaKVP.Value)
             {
-                // Obtener las salidas registradas para esta máquina concreta
-                var salidas = await repository.ObtenerSalidasPorMaquinaAsync(maquina.Id);
+                // Obtenemos los registros COMPLETOS de la tabla de recetas (con MinVal, MaxVal, Parametro, etc.)
+                var recetasDb = await repository.ObtenerRecetasPorMaquinaAsync(maquina.Id) ?? [];
 
                 maquinasVM.Add(new MaquinaViewModel
                 {
                     Id = maquina.Id,
-                    IdMaquina = maquina.IdMaquina,
-                    Recetas = salidas.Select(s => new RecetaViewModel
+                    IdMaquina = maquina.IdMaquina ?? "",
+                    Recetas = recetasDb.Select(r => new RecetaViewModel
                     {
-                        Id = maquina.Id,
-                        Salida = s.ToString()
+                        Id = r.IdReferencia,
+                        Salida = r.Salida.ToString(),
+                        Parametro = r.Parametro ?? "Límite Control",
+                        MinVal = r.MinVal,
+                        MaxVal = r.MaxVal,
+                        FechaModificacion = r.FechaModificacion ?? r.FechaCreacion,
+                        ModificadoPor = r.ModificadoPor ?? "SISTEMA_INICIAL",
+                        Estado = r.Estado
                     }).ToList()
                 });
             }
 
-            CeldaViewModel celdaVM = new()
+            celdasVM.Add(new CeldaViewModel
             {
                 Celda = celdaKVP.Key,
                 Maquinas = maquinasVM
-            };
-
-            celdasVM.Add(celdaVM);
+            });
         }
 
         return View("recetas", new RecetasViewModel()
         {
             Celdas = celdasVM
         });
-    }
-
-    public IActionResult Recetas()
-    {
-        return View("recetas");
     }
 }
