@@ -1,5 +1,5 @@
 {
-    "id_maquina": "CELDA-03",
+    "id_maquina": "CELDA-02",
     "puerto_serial": "AUTO",
     "baudrate": 57600,
     "timeout_puerto": 0.5,

@@ -46,13 +46,7 @@ C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.Entit
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Design.dll
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Relational.dll
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.SqlServer.dll
-C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.Extensions.Caching.Memory.dll
-C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
-C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.Extensions.DependencyModel.dll
-C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
-C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
-C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.Identity.Client.dll
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.Identity.Client.Extensions.Msal.dll
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Microsoft.IdentityModel.Abstractions.dll
@@ -68,7 +62,6 @@ C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Mono.TextTempla
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Swashbuckle.AspNetCore.Swagger.dll
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGen.dll
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
-C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\System.ClientModel.dll
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\System.CodeDom.dll
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\System.Composition.AttributedModel.dll
 C:\Users\darijim1\Documents\enhartt\enhartt.mvc\bin\Debug\net8.0\System.Composition.Convention.dll
