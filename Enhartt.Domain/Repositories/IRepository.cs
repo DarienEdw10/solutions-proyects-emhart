@@ -15,7 +15,7 @@ namespace Enhartt.Domain.Repositories
         // -------------------------------------------------------------
         // MÓDULO MAQUINAS (Catálogo Celdas Tucker)
         // -------------------------------------------------------------
-        Task<IEnumerable<Maquina>> ObtenerMaquinasActivasAsync();
+        Task<IEnumerable<Maquina>> ObtenerMaquinasAsync(bool soloActivos=true);
         Task<Maquina?> ObtenerMaquinaPorIdAsync(string idMaquina);
         Task<Maquina?> AgregarMaquinaAsync(Maquina maquina);
         Task<Maquina?> ActualizarMaquinaAsync(Maquina maquina);

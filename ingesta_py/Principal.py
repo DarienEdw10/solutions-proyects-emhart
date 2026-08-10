@@ -1,4 +1,6 @@
 # CODIGO YA FUNCIONANDO LAS SALIDAS, LA MAQUINA 1 Y 3
+### CAMBIAR ESTE CODIGO PORQUE ESTA ATRASADO#####
+
 from datetime import datetime
 import logging
 import os

@@ -1,7 +1,19 @@
+using Enhartt.Domain.Data;
+using Enhartt.Domain.Repositories;
+using Enhartt.MVC.Services;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+// Inyeccion de dependencias sqlserver
+builder.Services.AddDbContext<AppDbContext>(options =>options.UseSqlServer(
+    builder.Configuration.GetConnectionString("DefaultConnection")));
+// Inyeccion de dependencias con respecto al repositorio
+builder.Services.AddScoped<IRepository, Repository>();
+// Inyeccion de dependencias con respecto al servicio
+builder.Services.AddScoped<EnharttService>();
 
 var app = builder.Build();
 

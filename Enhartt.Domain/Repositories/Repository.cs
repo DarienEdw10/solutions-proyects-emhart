@@ -49,12 +49,15 @@ namespace Enhartt.Domain.Repositories
         // =============================================================
         // MAQUINAS
         // =============================================================
-        public async Task<IEnumerable<Maquina>> ObtenerMaquinasActivasAsync()
+        public async Task<IEnumerable<Maquina>> ObtenerMaquinasAsync(bool soloActivos =true)
         {
-            return await _context.Maquinas
+            var query = _context.Maquinas
                                  .AsNoTracking()
-                                 .Where(maquina => maquina.Activo == true)
-                                 .ToListAsync();
+                                 .AsQueryable(); 
+
+            if (soloActivos) query.Where(maquina=>maquina.Activo == true);
+
+            return await query.ToListAsync();
         }
 
         public async Task<Maquina?> ObtenerMaquinaPorIdAsync(string idMaquina)
