@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "QpR+weyBmsI=",
+  "dgSpecHash": "ApD+2L5ALn8=",
   "success": true,
-  "projectFilePath": "C:\\Users\\darijim1\\Documents\\enhartt\\enhartt.mvc\\Enhartt.MVC.csproj",
+  "projectFilePath": "C:\\Users\\darijim1\\Documents\\enhartt\\Enhartt.MVC\\Enhartt.MVC.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\darijim1\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\darijim1\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",

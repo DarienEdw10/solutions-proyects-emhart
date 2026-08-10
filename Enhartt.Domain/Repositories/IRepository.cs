@@ -17,6 +17,8 @@ namespace Enhartt.Domain.Repositories
         // -------------------------------------------------------------
         Task<IEnumerable<Maquina>> ObtenerMaquinasActivasAsync();
         Task<Maquina?> ObtenerMaquinaPorIdAsync(string idMaquina);
+        Task<Maquina?> AgregarMaquinaAsync(Maquina maquina);
+        Task<Maquina?> ActualizarMaquinaAsync(Maquina maquina);
 
         // -------------------------------------------------------------
         // MÓDULO PARAMETROS (Telemetría Disparos / Ingesta PLC)

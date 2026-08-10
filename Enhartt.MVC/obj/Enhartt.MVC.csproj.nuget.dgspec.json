@@ -1,7 +1,7 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\darijim1\\Documents\\enhartt\\enhartt.mvc\\Enhartt.MVC.csproj": {}
+    "C:\\Users\\darijim1\\Documents\\enhartt\\Enhartt.MVC\\Enhartt.MVC.csproj": {}
   },
   "projects": {
     "C:\\Users\\darijim1\\Documents\\enhartt\\Enhartt.Domain\\Enhartt.Domain.csproj": {
@@ -85,14 +85,14 @@
         }
       }
     },
-    "C:\\Users\\darijim1\\Documents\\enhartt\\enhartt.mvc\\Enhartt.MVC.csproj": {
+    "C:\\Users\\darijim1\\Documents\\enhartt\\Enhartt.MVC\\Enhartt.MVC.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\darijim1\\Documents\\enhartt\\enhartt.mvc\\Enhartt.MVC.csproj",
+        "projectUniqueName": "C:\\Users\\darijim1\\Documents\\enhartt\\Enhartt.MVC\\Enhartt.MVC.csproj",
         "projectName": "Enhartt.MVC",
-        "projectPath": "C:\\Users\\darijim1\\Documents\\enhartt\\enhartt.mvc\\Enhartt.MVC.csproj",
+        "projectPath": "C:\\Users\\darijim1\\Documents\\enhartt\\Enhartt.MVC\\Enhartt.MVC.csproj",
         "packagesPath": "C:\\Users\\darijim1\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\darijim1\\Documents\\enhartt\\enhartt.mvc\\obj\\",
+        "outputPath": "C:\\Users\\darijim1\\Documents\\enhartt\\Enhartt.MVC\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\darijim1\\AppData\\Roaming\\NuGet\\NuGet.Config"
