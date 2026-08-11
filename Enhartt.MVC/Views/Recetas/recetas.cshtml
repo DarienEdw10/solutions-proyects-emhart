@@ -22,9 +22,15 @@
 
     <div class="col-md-4">
         <label class="form-label fw-bold">Seleccionar Salida / Pistola</label>
-        <select id="selectSalida" class="form-select" disabled>
-            <option value="">-- Seleccione una Celda Primero --</option>
-        </select>
+        <div class="input-group">
+            <select id="selectSalida" class="form-select" disabled>
+                <option value="">-- Seleccione una Celda Primero --</option>
+            </select>
+            <button id="btnAbrirModalNuevaSalida" class="btn btn-outline-primary" type="button"
+                    title="Agregar Nueva Salida" disabled>
+                <i class="bi bi-plus-lg"></i>
+            </button>
+        </div>
     </div>
 
     <div class="col-md-4 d-flex align-items-end">
@@ -119,354 +125,456 @@
     </div>
 </div>
 
+<!-- Modal Agregar Nueva Salida -->
+<div class="modal fade" id="modalNuevaSalida" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title fw-bold mb-0">
+                    <i class="bi bi-plus-circle text-primary me-2"></i>Nueva Salida
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Número de Salida / Pistola</label>
+                    <input type="number" id="txtNuevaSalida" class="form-control form-control-sm" placeholder="Ej. 3" min="1" max="99">
+                </div>
+                <small class="text-muted d-block" style="font-size: 11px;">
+                    <i class="bi bi-info-circle me-1"></i>Se creará la plantilla inicial de parámetros de calidad para esta salida.
+                </small>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="btnGuardarNuevaSalida" class="btn btn-sm btn-primary fw-bold">
+                    <i class="bi bi-check-lg me-1"></i>Crear Salida
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de Confirmación Bootstrap -->
-<div class="modal fade" id="modalConfirmarGuardar" tabindex="-1" aria-labelledby="modalConfirmarLabel"
-     aria-hidden="true">
+<div class="modal fade" id="modalConfirmarGuardar" tabindex="-1" aria-labelledby="modalConfirmarLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary text-white py-3">
                 <h5 class="modal-title fs-6 fw-bold" id="modalConfirmarLabel">
                     <i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>Confirmar Modificación de Límites
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body py-4">
-                <p class="mb-2 text-dark fs-6 fw-semibold">¿Estás seguro de que deseas guardar los nuevos límites de
-                    calidad?</p>
-                    <div class="alert alert-warning mb-0 py-2 small border-start border-4 border-warning">
-                        <i class="bi bi-info-circle-fill me-1"></i> Esta acción actualizará los rangos de tolerancia
-                        operativos en la base de datos y quedará registrada en la auditoría del sistema.
-                    </div>
+                <p class="mb-2 text-dark fs-6 fw-semibold">¿Estás seguro de que deseas guardar los nuevos límites de calidad?</p>
+                <div class="alert alert-warning mb-0 py-2 small border-start border-4 border-warning">
+                    <i class="bi bi-info-circle-fill me-1"></i> Esta acción actualizará los rangos de tolerancia operativos en la base de datos y quedará registrada en la auditoría del sistema.
                 </div>
-                <div class="modal-footer bg-light py-2">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg me-1"></i>Cancelar
-                    </button>
-                    <button type="button" id="btnConfirmarGuardarFinal" class="btn btn-sm btn-success fw-bold px-3">
-                        <i class="bi bi-check-lg me-1"></i>Sí, Guardar Cambios
-                    </button>
-                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i>Cancelar
+                </button>
+                <button type="button" id="btnConfirmarGuardarFinal" class="btn btn-sm btn-success fw-bold px-3">
+                    <i class="bi bi-check-lg me-1"></i>Sí, Guardar Cambios
+                </button>
             </div>
         </div>
     </div>
+</div>
 
-    @section Scripts {
-        <script>
-            // Cargar todo el mapa de datos C# estructurado directamente en memoria del cliente
-            const celdasData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.Celdas ?? new List<Enhartt.MVC.Models.ViewModels.CeldaViewModel>()));
+@section Scripts {
+    <script>
+        // 1. Cargar todo el mapa de datos C# estructurado en memoria del cliente
+        const celdasData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.Celdas ?? new List<Enhartt.MVC.Models.ViewModels.CeldaViewModel>()));
 
-            const selectCelda = document.getElementById('selectCelda');
-            const selectSalida = document.getElementById('selectSalida');
-            const tblLimitesBody = document.getElementById('tblLimitesBody');
-            const btnGuardarCambios = document.getElementById('btnGuardarCambios');
-            const lblUltimaMod = document.getElementById('lblUltimaMod');
+        // 2. Referencias a elementos DOM principales
+        const selectCelda = document.getElementById('selectCelda');
+        const selectSalida = document.getElementById('selectSalida');
+        const tblLimitesBody = document.getElementById('tblLimitesBody');
+        const btnGuardarCambios = document.getElementById('btnGuardarCambios');
+        const lblUltimaMod = document.getElementById('lblUltimaMod');
 
-            // Instancia del Modal Bootstrap
-            const modalElement = document.getElementById('modalConfirmarGuardar');
-            const modalConfirmar = new bootstrap.Modal(modalElement);
-            const btnConfirmarGuardarFinal = document.getElementById('btnConfirmarGuardarFinal');
+        // Modal de Nueva Salida
+        const btnAbrirModalNuevaSalida = document.getElementById('btnAbrirModalNuevaSalida');
+        const modalNuevaSalidaElement = document.getElementById('modalNuevaSalida');
+        const modalNuevaSalida = new bootstrap.Modal(modalNuevaSalidaElement);
+        const txtNuevaSalida = document.getElementById('txtNuevaSalida');
+        const btnGuardarNuevaSalida = document.getElementById('btnGuardarNuevaSalida');
 
-            const btnConsultarAuditoria = document.getElementById('btnConsultarAuditoria');
-            const tblAuditoriaBody = document.getElementById('tblAuditoriaBody');
-            const inputFechaInicio = document.getElementById('fechaInicio');
-            const inputFechaFin = document.getElementById('fechaFin');
+        // Modal de Confirmación
+        const modalConfirmarElement = document.getElementById('modalConfirmarGuardar');
+        const modalConfirmar = new bootstrap.Modal(modalConfirmarElement);
+        const btnConfirmarGuardarFinal = document.getElementById('btnConfirmarGuardarFinal');
 
-            // Evento al presionar Consultar Auditoría
-            btnConsultarAuditoria.addEventListener('click', async function () {
-                const fechaInicio = inputFechaInicio.value;
-                const fechaFin = inputFechaFin.value;
+        // Auditoría
+        const btnConsultarAuditoria = document.getElementById('btnConsultarAuditoria');
+        const tblAuditoriaBody = document.getElementById('tblAuditoriaBody');
+        const inputFechaInicio = document.getElementById('fechaInicio');
+        const inputFechaFin = document.getElementById('fechaFin');
 
-                if (!fechaInicio || !fechaFin) {
-                    mostrarNotificacion("Por favor selecciona un rango de fechas (Inicio y Fin).", "warning");
-                    return;
+        // -------------------------------------------------------------
+        // LÓGICA DE EVENTOS
+        // -------------------------------------------------------------
+
+        // Manejar cambio en Celda seleccionada
+        selectCelda.addEventListener('change', function () {
+            const celdaNombre = this.value;
+
+            selectSalida.innerHTML = '<option value="">-- Seleccione una Salida / Pistola --</option>';
+            selectSalida.disabled = true;
+            btnAbrirModalNuevaSalida.disabled = !celdaNombre;
+            limpiarTabla();
+
+            if (!celdaNombre) return;
+
+            const celdaEncontrada = celdasData.find(c => (c.Celda || c.celda) === celdaNombre);
+
+            if (celdaEncontrada) {
+                const maquinas = celdaEncontrada.Maquinas || celdaEncontrada.maquinas || [];
+                let haySalidas = false;
+
+                maquinas.forEach(maquina => {
+                    const recetas = maquina.Recetas || maquina.recetas || [];
+                    const salidasUnicas = [...new Set(recetas.map(r => String(r.Salida || r.salida)))];
+
+                    salidasUnicas.forEach(numSalida => {
+                        if (numSalida && numSalida !== "undefined") {
+                            const option = document.createElement('option');
+                            option.value = maquina.Id || maquina.id;
+                            option.dataset.salida = numSalida;
+                            option.textContent = `Salida: ${numSalida} (Máquina: ${maquina.IdMaquina || maquina.idMaquina})`;
+                            selectSalida.appendChild(option);
+                            haySalidas = true;
+                        }
+                    });
+                });
+
+                if (haySalidas) {
+                    selectSalida.disabled = false;
                 }
+            }
+        });
 
-                // Opcional: Obtener la celda/salida seleccionada arriba para filtrar
-                const idMaquina = selectSalida.value ? parseInt(selectSalida.value, 10) : '';
-                const numSalida = selectSalida.options[selectSalida.selectedIndex]?.dataset.salida || '';
-                const celdaNombre = selectCelda.value || 'General';
+        // Manejar cambio en Salida seleccionada
+        selectSalida.addEventListener('change', function () {
+            const idMaquina = parseInt(this.value, 10);
+            const numSalida = this.options[this.selectedIndex]?.dataset.salida;
+            const celdaNombre = selectCelda.value;
 
-                btnConsultarAuditoria.disabled = true;
-                btnConsultarAuditoria.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Buscando...';
+            if (!idMaquina || !numSalida || !celdaNombre) {
+                limpiarTabla();
+                return;
+            }
 
-                try {
-                    const url = `/Recetas/ObtenerAuditoria?idMaquina=${idMaquina}&salida=${numSalida}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
-                    const response = await fetch(url);
-                    const result = await response.json();
+            const celdaObj = celdasData.find(c => (c.Celda || c.celda) === celdaNombre);
+            const maquinas = celdaObj?.Maquinas || celdaObj?.maquinas || [];
+            const maquinaObj = maquinas.find(m => (m.Id || m.id) === idMaquina);
+            const recetas = maquinaObj?.Recetas || maquinaObj?.recetas || [];
 
-                    if (result.success) {
-                        renderizarTablaAuditoria(result.data, celdaNombre);
-                    } else {
-                        mostrarNotificacion("Error: " + result.message, "danger");
-                    }
-                } catch (error) {
-                    console.error("Error al consultar auditoría:", error);
-                    mostrarNotificacion("Ocurrió un error al consultar el historial.", "danger");
-                } finally {
-                    btnConsultarAuditoria.disabled = false;
-                    btnConsultarAuditoria.innerHTML = '<i class="bi bi-search me-1"></i>Consultar Auditoría';
+            const parametrosEncontrados = recetas.filter(r =>
+                String(r.Salida || r.salida) === String(numSalida) &&
+                (r.Estado ?? r.estado ?? true)
+            );
+
+            renderizarTabla(parametrosEncontrados);
+        });
+
+        // Abrir Modal Nueva Salida
+        btnAbrirModalNuevaSalida.addEventListener('click', function () {
+            txtNuevaSalida.value = '';
+            modalNuevaSalida.show();
+        });
+
+        // Crear Nueva Salida
+        btnGuardarNuevaSalida.addEventListener('click', async function () {
+            const numSalida = parseInt(txtNuevaSalida.value, 10);
+            const celdaNombre = selectCelda.value;
+
+            if (!numSalida || numSalida <= 0) {
+                mostrarNotificacion("Por favor ingresa un número de salida válido.", "warning");
+                return;
+            }
+
+            const celdaObj = celdasData.find(c => (c.Celda || c.celda) === celdaNombre);
+            const maquina = celdaObj?.Maquinas?.[0] || celdaObj?.maquinas?.[0];
+            const idMaquina = maquina?.Id || maquina?.id;
+
+            if (!idMaquina) {
+                mostrarNotificacion("No se encontró una máquina válida asociada a la celda.", "danger");
+                return;
+            }
+
+            btnGuardarNuevaSalida.disabled = true;
+            btnGuardarNuevaSalida.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Creando...';
+
+            try {
+                const response = await fetch('/Recetas/AgregarSalida', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        IdMaquina: idMaquina,
+                        NumeroSalida: numSalida
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    modalNuevaSalida.hide();
+                    mostrarNotificacion(result.message, "success");
+
+                    const option = document.createElement('option');
+                    option.value = idMaquina;
+                    option.dataset.salida = numSalida;
+                    option.textContent = `Salida: ${numSalida} (Máquina: ${maquina.IdMaquina || maquina.idMaquina})`;
+
+                    selectSalida.appendChild(option);
+                    selectSalida.disabled = false;
+                    selectSalida.value = idMaquina;
+
+                    selectSalida.dispatchEvent(new Event('change'));
+                } else {
+                    mostrarNotificacion("Error: " + result.message, "danger");
+                }
+            } catch (error) {
+                console.error("Error al agregar salida:", error);
+                mostrarNotificacion("Ocurrió un error al intentar registrar la salida.", "danger");
+            } finally {
+                btnGuardarNuevaSalida.disabled = false;
+                btnGuardarNuevaSalida.innerHTML = '<i class="bi bi-check-lg me-1"></i>Crear Salida';
+            }
+        });
+
+        // Guardar Cambios
+        btnGuardarCambios.addEventListener('click', function () {
+            const idMaquina = parseInt(selectSalida.value, 10);
+            const numSalida = selectSalida.options[selectSalida.selectedIndex]?.dataset.salida;
+
+            if (!idMaquina || !numSalida) {
+                mostrarNotificacion("Por favor selecciona una celda y salida válidas.", "warning");
+                return;
+            }
+
+            modalConfirmar.show();
+        });
+
+        btnConfirmarGuardarFinal.addEventListener('click', async function () {
+            const idMaquina = parseInt(selectSalida.value, 10);
+            const numSalida = selectSalida.options[selectSalida.selectedIndex]?.dataset.salida;
+
+            const filas = tblLimitesBody.querySelectorAll('tr');
+            const listaParametros = [];
+
+            filas.forEach(row => {
+                const celdaParam = row.cells[0]?.innerText.trim();
+                const inputs = row.querySelectorAll('input[type="number"]');
+
+                if (celdaParam && inputs.length === 2) {
+                    const minVal = parseFloat(inputs[0].value);
+                    const maxVal = parseFloat(inputs[1].value);
+
+                    listaParametros.push({
+                        Parametro: celdaParam,
+                        MinVal: isNaN(minVal) ? 0 : minVal,
+                        MaxVal: isNaN(maxVal) ? 0 : maxVal
+                    });
                 }
             });
 
-            function renderizarTablaAuditoria(datos, celdaNombre) {
-                if (!datos || datos.length === 0) {
-                    tblAuditoriaBody.innerHTML = `
+            if (listaParametros.length === 0) {
+                modalConfirmar.hide();
+                mostrarNotificacion("No hay parámetros disponibles para guardar.", "warning");
+                return;
+            }
+
+            modalConfirmar.hide();
+            btnGuardarCambios.disabled = true;
+            btnGuardarCambios.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Guardando...';
+
+            try {
+                const response = await fetch('/Recetas/Guardar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        IdMaquina: idMaquina,
+                        Salida: numSalida,
+                        Parametros: listaParametros
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    mostrarNotificacion(result.message, "success");
+                    if (lblUltimaMod) {
+                        lblUltimaMod.innerText = new Date().toLocaleTimeString();
+                    }
+                } else {
+                    mostrarNotificacion("Error al guardar: " + result.message, "danger");
+                }
+            } catch (error) {
+                console.error("Error en la solicitud:", error);
+                mostrarNotificacion("Ocurrió un problema de red al intentar guardar los límites.", "danger");
+            } finally {
+                btnGuardarCambios.disabled = false;
+                btnGuardarCambios.innerHTML = '<i class="bi bi-floppy me-1"></i>Guardar Cambios';
+            }
+        });
+
+        // Consultar Auditoría
+        btnConsultarAuditoria.addEventListener('click', async function () {
+            const fechaInicio = inputFechaInicio.value;
+            const fechaFin = inputFechaFin.value;
+
+            if (!fechaInicio || !fechaFin) {
+                mostrarNotificacion("Por favor selecciona un rango de fechas (Inicio y Fin).", "warning");
+                return;
+            }
+
+            const idMaquina = selectSalida.value ? parseInt(selectSalida.value, 10) : '';
+            const numSalida = selectSalida.options[selectSalida.selectedIndex]?.dataset.salida || '';
+
+            btnConsultarAuditoria.disabled = true;
+            btnConsultarAuditoria.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Buscando...';
+
+            try {
+                const url = `/Recetas/ObtenerAuditoria?idMaquina=${idMaquina}&salida=${numSalida}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success) {
+                    renderizarTablaAuditoria(result.data);
+                } else {
+                    mostrarNotificacion("Error: " + result.message, "danger");
+                }
+            } catch (error) {
+                console.error("Error al consultar auditoría:", error);
+                mostrarNotificacion("Ocurrió un error al consultar el historial.", "danger");
+            } finally {
+                btnConsultarAuditoria.disabled = false;
+                btnConsultarAuditoria.innerHTML = '<i class="bi bi-search me-1"></i>Consultar Auditoría';
+            }
+        });
+
+        // Helper renderizado auditoría
+        function renderizarTablaAuditoria(datos) {
+            if (!datos || datos.length === 0) {
+                tblAuditoriaBody.innerHTML = `
                     <tr>
                         <td colspan="6" class="text-center text-muted py-3">
                             No se encontraron registros de auditoría para el rango de fechas seleccionado.
                         </td>
                     </tr>`;
-                    return;
-                }
+                return;
+            }
 
-                tblAuditoriaBody.innerHTML = '';
+            tblAuditoriaBody.innerHTML = '';
 
-                datos.forEach(item => {
-                    const tr = document.createElement('tr');
-                    const esActivo = item.estado === "ACTIVO";
+            datos.forEach(item => {
+                const tr = document.createElement('tr');
+                const esActivo = item.estado === "ACTIVO";
 
-                    tr.innerHTML = `
+                tr.innerHTML = `
                     <td class="small font-monospace">${item.fecha}</td>
-                    <td><span class="badge bg-secondary">${celdaNombre} / Salida ${item.salida}</span></td>
+                    <td><span class="badge bg-secondary">${item.celda || 'General'} / Salida ${item.salida}</span></td>
                     <td class="fw-bold">${item.parametro}</td>
                     <td><code class="text-dark fw-bold">${item.minVal}</code> | <code class="text-dark fw-bold">${item.maxVal}</code></td>
                     <td><span class="badge ${esActivo ? 'bg-success' : 'bg-danger'}">${esActivo ? '🟢 ACTIVO' : '🔴 INACTIVO'}</span></td>
                     <td><span class="badge bg-light text-dark border">${item.usuario}</span></td>
                 `;
-                    tblAuditoriaBody.appendChild(tr);
-                });
-            }
+                tblAuditoriaBody.appendChild(tr);
+            });
+        }
 
-            // 1. Manejar cambio en la Celda seleccionada
-            selectCelda.addEventListener('change', function () {
-                const celdaNombre = this.value;
-
-                selectSalida.innerHTML = '<option value="">-- Seleccione una Salida / Pistola --</option>';
-                selectSalida.disabled = true;
+        // Helper renderizado límites
+        function renderizarTabla(recetas) {
+            if (!recetas || recetas.length === 0) {
                 limpiarTabla();
-
-                if (!celdaNombre) return;
-
-                const celdaEncontrada = celdasData.find(c => (c.Celda || c.celda) === celdaNombre);
-
-                if (celdaEncontrada) {
-                    const maquinas = celdaEncontrada.Maquinas || celdaEncontrada.maquinas || [];
-                    let haySalidas = false;
-
-                    maquinas.forEach(maquina => {
-                        const recetas = maquina.Recetas || maquina.recetas || [];
-                        const salidasUnicas = [...new Set(recetas.map(r => String(r.Salida || r.salida)))];
-
-                        salidasUnicas.forEach(numSalida => {
-                            if (numSalida && numSalida !== "undefined") {
-                                const option = document.createElement('option');
-                                option.value = maquina.Id || maquina.id;
-                                option.dataset.salida = numSalida;
-                                option.textContent = `Salida: ${numSalida} (Máquina: ${maquina.IdMaquina || maquina.idMaquina})`;
-                                selectSalida.appendChild(option);
-                                haySalidas = true;
-                            }
-                        });
-                    });
-
-                    if (haySalidas) {
-                        selectSalida.disabled = false;
-                    }
-                }
-            });
-
-            // 2. Manejar cambio en la Salida seleccionada -> Pinta las filas de parámetros
-            selectSalida.addEventListener('change', function () {
-                const idMaquina = parseInt(this.value, 10);
-                const numSalida = this.options[this.selectedIndex]?.dataset.salida;
-                const celdaNombre = selectCelda.value;
-
-                if (!idMaquina || !numSalida || !celdaNombre) {
-                    limpiarTabla();
-                    return;
-                }
-
-                const celdaObj = celdasData.find(c => (c.Celda || c.celda) === celdaNombre);
-                const maquinas = celdaObj?.Maquinas || celdaObj?.maquinas || [];
-                const maquinaObj = maquinas.find(m => (m.Id || m.id) === idMaquina);
-                const recetas = maquinaObj?.Recetas || maquinaObj?.recetas || [];
-
-                const parametrosEncontrados = recetas.filter(r =>
-                    String(r.Salida || r.salida) === String(numSalida) &&
-                    (r.Estado ?? r.estado ?? true)
-                );
-
-                renderizarTabla(parametrosEncontrados);
-            });
-
-            // 3. Al dar clic en "Guardar Cambios" -> Abrir Modal de Confirmación
-            btnGuardarCambios.addEventListener('click', function () {
-                const idMaquina = parseInt(selectSalida.value, 10);
-                const numSalida = selectSalida.options[selectSalida.selectedIndex]?.dataset.salida;
-
-                if (!idMaquina || !numSalida) {
-                    mostrarNotificacion("Por favor selecciona una celda y salida válidas.", "warning");
-                    return;
-                }
-
-                modalConfirmar.show();
-            });
-
-            // 4. Al confirmar dentro del Modal -> Ejecutar la petición POST al Servidor
-            btnConfirmarGuardarFinal.addEventListener('click', async function () {
-                const idMaquina = parseInt(selectSalida.value, 10);
-                const numSalida = selectSalida.options[selectSalida.selectedIndex]?.dataset.salida;
-
-                const filas = tblLimitesBody.querySelectorAll('tr');
-                const listaParametros = [];
-
-                filas.forEach(row => {
-                    const celdaParam = row.cells[0]?.innerText.trim();
-                    const inputs = row.querySelectorAll('input[type="number"]');
-
-                    if (celdaParam && inputs.length === 2) {
-                        const minVal = parseFloat(inputs[0].value);
-                        const maxVal = parseFloat(inputs[1].value);
-
-                        listaParametros.push({
-                            Parametro: celdaParam,
-                            MinVal: isNaN(minVal) ? 0 : minVal,
-                            MaxVal: isNaN(maxVal) ? 0 : maxVal
-                        });
-                    }
-                });
-
-                if (listaParametros.length === 0) {
-                    modalConfirmar.hide();
-                    mostrarNotificacion("No hay parámetros disponibles para guardar.", "warning");
-                    return;
-                }
-
-                modalConfirmar.hide();
-                btnGuardarCambios.disabled = true;
-                btnGuardarCambios.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Guardando...';
-
-                try {
-                    const response = await fetch('/Recetas/Guardar', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            IdMaquina: idMaquina,
-                            Salida: numSalida,
-                            Parametros: listaParametros
-                        })
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        mostrarNotificacion(result.message, "success");
-                        if (lblUltimaMod) {
-                            lblUltimaMod.innerText = new Date().toLocaleTimeString();
-                        }
-                    } else {
-                        mostrarNotificacion("Error al guardar: " + result.message, "danger");
-                    }
-                } catch (error) {
-                    console.error("Error en la solicitud:", error);
-                    mostrarNotificacion("Ocurrió un problema de red al intentar guardar los límites.", "danger");
-                } finally {
-                    btnGuardarCambios.disabled = false;
-                    btnGuardarCambios.innerHTML = '<i class="bi bi-floppy me-1"></i>Guardar Cambios';
-                }
-            });
-
-            function renderizarTabla(recetas) {
-                if (!recetas || recetas.length === 0) {
-                    limpiarTabla();
-                    return;
-                }
-
-                tblLimitesBody.innerHTML = '';
-
-                const fechas = recetas
-                    .map(r => r.FechaModificacion || r.fechaModificacion)
-                    .filter(f => f)
-                    .sort()
-                    .reverse();
-
-                recetas.forEach((r) => {
-                    const tr = document.createElement('tr');
-
-                    const param = r.Parametro || r.parametro || 'Límite Control';
-                    const minVal = r.MinVal ?? r.minVal ?? 0;
-                    const maxVal = r.MaxVal ?? r.maxVal ?? 0;
-                    const fechaRaw = r.FechaModificacion || r.fechaModificacion || '';
-                    const modPor = r.ModificadoPor || r.modificadoPor || 'SISTEMA_INICIAL';
-                    const estadoBool = r.Estado ?? r.estado ?? true;
-
-                    const fechaTxt = fechaRaw ? fechaRaw.toString().replace('T', ' ').slice(0, 19) : 'Sin registro';
-
-                    tr.innerHTML = `
-                            <td class="fw-bold text-dark">${param}</td>
-                            <td><span class="badge bg-secondary">Físico</span></td>
-                            <td><input type="number" step="0.01" class="form-control form-control-sm fw-bold border-secondary" value="${minVal}"></td>
-                            <td><input type="number" step="0.01" class="form-control form-control-sm fw-bold border-secondary" value="${maxVal}"></td>
-                            <td><small class="text-muted font-monospace"><i class="bi bi-clock-history me-1"></i>${fechaTxt}</small></td>
-                            <td><span class="badge bg-light text-dark border">${modPor}</span></td>
-                            <td><span class="badge ${estadoBool ? 'bg-success' : 'bg-danger'}">${estadoBool ? '🟢 ACTIVO' : '🔴 INACTIVO'}</span></td>
-                        `;
-                    tblLimitesBody.appendChild(tr);
-                });
-
-                if (btnGuardarCambios) btnGuardarCambios.disabled = false;
-                if (lblUltimaMod) {
-                    lblUltimaMod.innerText = fechas[0] ? fechas[0].toString().replace('T', ' ').slice(0, 19) : new Date().toLocaleTimeString();
-                }
+                return;
             }
 
-            function limpiarTabla() {
-                if (tblLimitesBody) {
-                    tblLimitesBody.innerHTML = `
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-4">
-                                    No hay parámetros configurados para la combinación seleccionada.
-                                </td>
-                            </tr>`;
-                }
-                if (btnGuardarCambios) btnGuardarCambios.disabled = true;
-                if (lblUltimaMod) lblUltimaMod.innerText = 'N/A';
+            tblLimitesBody.innerHTML = '';
+
+            const fechas = recetas
+                .map(r => r.FechaModificacion || r.fechaModificacion)
+                .filter(f => f)
+                .sort()
+                .reverse();
+
+            recetas.forEach((r) => {
+                const tr = document.createElement('tr');
+
+                const param = r.Parametro || r.parametro || 'Límite Control';
+                const minVal = r.MinVal ?? r.minVal ?? 0;
+                const maxVal = r.MaxVal ?? r.maxVal ?? 0;
+                const fechaRaw = r.FechaModificacion || r.fechaModificacion || '';
+                const modPor = r.ModificadoPor || r.modificadoPor || 'SISTEMA_INICIAL';
+                const estadoBool = r.Estado ?? r.estado ?? true;
+
+                const fechaTxt = fechaRaw ? fechaRaw.toString().replace('T', ' ').slice(0, 19) : 'Sin registro';
+
+                tr.innerHTML = `
+                    <td class="fw-bold text-dark">${param}</td>
+                    <td><span class="badge bg-secondary">Físico</span></td>
+                    <td><input type="number" step="0.01" class="form-control form-control-sm fw-bold border-secondary" value="${minVal}"></td>
+                    <td><input type="number" step="0.01" class="form-control form-control-sm fw-bold border-secondary" value="${maxVal}"></td>
+                    <td><small class="text-muted font-monospace"><i class="bi bi-clock-history me-1"></i>${fechaTxt}</small></td>
+                    <td><span class="badge bg-light text-dark border">${modPor}</span></td>
+                    <td><span class="badge ${estadoBool ? 'bg-success' : 'bg-danger'}">${estadoBool ? '🟢 ACTIVO' : '🔴 INACTIVO'}</span></td>
+                `;
+                tblLimitesBody.appendChild(tr);
+            });
+
+            if (btnGuardarCambios) btnGuardarCambios.disabled = false;
+            if (lblUltimaMod) {
+                lblUltimaMod.innerText = fechas[0] ? fechas[0].toString().replace('T', ' ').slice(0, 19) : new Date().toLocaleTimeString();
+            }
+        }
+
+        function limpiarTabla() {
+            if (tblLimitesBody) {
+                tblLimitesBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            No hay parámetros configurados para la combinación seleccionada.
+                        </td>
+                    </tr>`;
+            }
+            if (btnGuardarCambios) btnGuardarCambios.disabled = true;
+            if (lblUltimaMod) lblUltimaMod.innerText = 'N/A';
+        }
+
+        // Sistema de Toasts
+        function mostrarNotificacion(mensaje, tipo = "success") {
+            let container = document.getElementById('toastContainerWrapper');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainerWrapper';
+                container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                container.style.zIndex = '1090';
+                document.body.appendChild(container);
             }
 
-            // Sistema dinámico de Toasts de Bootstrap
-            function mostrarNotificacion(mensaje, tipo = "success") {
-                let container = document.getElementById('toastContainerWrapper');
-                if (!container) {
-                    container = document.createElement('div');
-                    container.id = 'toastContainerWrapper';
-                    container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-                    container.style.zIndex = '1090';
-                    document.body.appendChild(container);
-                }
+            const toastId = 'toast_' + Date.now();
+            const bgClass = tipo === 'success' ? 'bg-success text-white' : (tipo === 'warning' ? 'bg-warning text-dark' : 'bg-danger text-white');
+            const iconClass = tipo === 'success' ? 'bi-check-circle-fill' : (tipo === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-exclamation-octagon-fill');
 
-                const toastId = 'toast_' + Date.now();
-                const bgClass = tipo === 'success' ? 'bg-success text-white' : (tipo === 'warning' ? 'bg-warning text-dark' : 'bg-danger text-white');
-                const iconClass = tipo === 'success' ? 'bi-check-circle-fill' : (tipo === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-exclamation-octagon-fill');
-
-                const toastHtml = `
-                        <div id="${toastId}" class="toast align-items-center ${bgClass} border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
-                            <div class="d-flex">
-                                <div class="toast-body d-flex align-items-center gap-2">
-                                    <i class="bi ${iconClass} fs-5"></i>
-                                    <span class="fw-semibold">${mensaje}</span>
-                                </div>
-                                <button type="button" class="btn-close ${tipo === 'warning' ? '' : 'btn-close-white'} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                            </div>
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center ${bgClass} border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body d-flex align-items-center gap-2">
+                            <i class="bi ${iconClass} fs-5"></i>
+                            <span class="fw-semibold">${mensaje}</span>
                         </div>
-                    `;
+                        <button type="button" class="btn-close ${tipo === 'warning' ? '' : 'btn-close-white'} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
 
-                container.insertAdjacentHTML('beforeend', toastHtml);
-                const toastEl = document.getElementById(toastId);
-                const bsToast = new bootstrap.Toast(toastEl, { delay: 4000 });
-                bsToast.show();
-            }
-        </script>
-    }
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            const toastEl = document.getElementById(toastId);
+            const bsToast = new bootstrap.Toast(toastEl, { delay: 4000 });
+            bsToast.show();
+        }
+    </script>
+}
