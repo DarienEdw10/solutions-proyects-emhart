@@ -3,7 +3,7 @@ using Enhartt.Domain.Models;
 
 namespace Enhartt.Domain.Repositories
 {
-    public interface IRepository 
+    public interface IRepository
     {
         // -------------------------------------------------------------
         // MÓDULO RECETAS (Tolerancias)
@@ -15,7 +15,7 @@ namespace Enhartt.Domain.Repositories
         // -------------------------------------------------------------
         // MÓDULO MAQUINAS (Catálogo Celdas Tucker)
         // -------------------------------------------------------------
-        Task<IEnumerable<Maquina>> ObtenerMaquinasAsync(bool soloActivos=true);
+        Task<IEnumerable<Maquina>> ObtenerMaquinasAsync(bool soloActivos = true);
         Task<Maquina?> ObtenerMaquinaPorIdAsync(string idMaquina);
         Task<Maquina?> AgregarMaquinaAsync(Maquina maquina);
         Task<Maquina?> ActualizarMaquinaAsync(Maquina maquina);
@@ -24,22 +24,28 @@ namespace Enhartt.Domain.Repositories
         // MÓDULO PARAMETROS (Telemetría Disparos / Ingesta PLC)
         // -------------------------------------------------------------
         Task<IEnumerable<Parametro>> ObtenerParametrosPaginadosAsync(
-            int? identificadorId, 
-            string? estatus, 
-            DateTime? fechaInicio, 
-            DateTime? fechaFin, 
-            string? busqueda, 
-            int pagina, 
+            int? identificadorId,
+            string? estatus,
+            DateTime? fechaInicio,
+            DateTime? fechaFin,
+            string? busqueda,
+            int pagina,
             int registrosPorPagina);
 
         Task<int> ContarParametrosTotalAsync(
-            int? identificadorId, 
-            string? estatus, 
-            DateTime? fechaInicio, 
-            DateTime? fechaFin, 
+            int? identificadorId,
+            string? estatus,
+            DateTime? fechaInicio,
+            DateTime? fechaFin,
             string? busqueda);
 
         Task<IEnumerable<int>> ObtenerSalidasPorMaquinaAsync(int idMaquina);
         Task<Parametro?> AgregarParametroIngestaAsync(Parametro parametro);
+
+        Task<IEnumerable<Receta>> ObtenerAuditoriaRecetasAsync(int? idMaquina,
+            string? salida,
+            DateTime? fechaInicio,
+            DateTime? fechaFin);
     }
+
 }

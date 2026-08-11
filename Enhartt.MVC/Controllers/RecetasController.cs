@@ -124,11 +124,13 @@ public class RecetasController : Controller
     {
         try
         {
+            var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
             var historial = await repository.ObtenerAuditoriaRecetasAsync(idMaquina, salida, fechaInicio, fechaFin);
 
             var resultadoDto = historial.Select(h => new
             {
                 Fecha = (h.FechaModificacion ?? h.FechaCreacion).ToString("yyyy-MM-dd HH:mm:ss"),
+                Celda = maquinas.FirstOrDefault(m => m.Id == h.IdMaquina)?.Celda ?? "CEN-01", // <-- Agregado
                 Salida = h.Salida,
                 Parametro = h.Parametro ?? "Límite Control",
                 MinVal = h.MinVal,
@@ -142,6 +144,51 @@ public class RecetasController : Controller
         catch (Exception ex)
         {
             return StatusCode(500, new { success = false, message = $"Error al obtener auditoría: {ex.Message}" });
+        }
+    }
+    public class AgregarSalidaDto
+    {
+        public int IdMaquina { get; set; }
+        public int NumeroSalida { get; set; }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AgregarSalida([FromBody] AgregarSalidaDto dto)
+    {
+        if (dto == null || dto.IdMaquina <= 0 || dto.NumeroSalida <= 0)
+        {
+            return BadRequest(new { success = false, message = "Datos de máquina o salida no válidos." });
+        }
+
+        try
+        {
+            string usuario = User?.Identity?.Name ?? "Usuario_Web";
+
+            // Definición de parámetros físicos estándar para la nueva salida
+            string[] parametrosBase = new string[] { "VolArc", "VolPri", "Corriente", "Tiempo", "Penetracion", "Energia" };
+
+            foreach (var param in parametrosBase)
+            {
+                var nuevaReceta = new Enhartt.Domain.Models.Receta
+                {
+                    IdMaquina = dto.IdMaquina,
+                    Salida = dto.NumeroSalida,
+                    Parametro = param,
+                    MinVal = 0,
+                    MaxVal = 0,
+                    Estado = true,
+                    FechaCreacion = DateTime.Now,
+                    ModificadoPor = usuario
+                };
+
+                await repository.AgregarRecetaAsync(nuevaReceta, usuario);
+            }
+
+            return Json(new { success = true, message = $"Salida {dto.NumeroSalida} agregada correctamente." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = $"Error al crear salida: {ex.Message}" });
         }
     }
 
