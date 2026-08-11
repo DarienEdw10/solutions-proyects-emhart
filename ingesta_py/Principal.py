@@ -630,3 +630,4 @@ if __name__ == "__main__":
 
     procesador = ProcesadorTramasIndustriales(CONFIG)
     procesador.ejecutar_monitoreo()
+
