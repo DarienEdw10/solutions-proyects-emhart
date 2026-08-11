@@ -1,13 +1,13 @@
-# CODIGO YA FUNCIONANDO LAS SALIDAS, LA MAQUINA 1 Y 3
-### CAMBIAR ESTE CODIGO PORQUE ESTA ATRASADO#####
-
+#CODIGO DE EJECUCION CON LECTURA DE-- CONF JSON. #CODIGO YA FUNCIONANDO LAS SALIDAS, LA MAQUINA 1 Y 3 cambiado con archivo config.json para leer el puerto y el id_maquina #  
 from datetime import datetime
+import json
 import logging
 import os
 import time
 import pandas as pd
 import serial
-from conexion import ConectorSQLServer
+import serial.tools.list_ports
+from conector import ConectorSQLServer
 
 # =====================================================================
 # CONFIGURACIÓN DEL SISTEMA DE LOGGING
@@ -22,25 +22,55 @@ logging.basicConfig(
 )
 
 # =====================================================================
-# CONFIGURACIONES Y CONSTANTES INDUSTRIALES
+# GESTIÓN DE CONFIGURACIÓN VÍA ARCHIVO JSON
 # =====================================================================
-PUERTO_SERIAL = "COM6"
-BAUDRATE = 57600
-TIMEOUT_PUERTO = 0.5
-ARCHIVO_RESPALDO = "respaldo_tucker.csv"
-ARCHIVO_ID_LOCAL = "maquina_id.txt"
-LIMITE_FALLAS_CONSECUTIVAS = 3
+ARCHIVO_CONFIG_JSON = "config.json"
 
-# Cadena de conexión actualizada para el servidor de planta SQLDEV
-CADENA_CONEXION_BD = (
-    "DRIVER={ODBC Driver 17 for SQL Server};"
-    "SERVER=ATKSV048\\SQLDEV;"
-    "DATABASE=Autotek.VIPTRA;"
-    "UID=atkviptra;"
-    "PWD=oTN#8X$G;"
-    "Encrypt=no;"
-    "TrustServerCertificate=yes;"
-)
+CONFIG_POR_DEFECTO = {
+    "id_maquina": "CELDA-01",
+    "puerto_serial": "AUTO",
+    "baudrate": 57600,
+    "timeout_puerto": 0.5,
+    "limite_fallas_consecutivas": 3,
+    "archivo_respaldo": "respaldo_tucker.csv",
+    "cadena_conexion_bd": (
+        "DRIVER={ODBC Driver 17 for SQL Server};"
+        "SERVER=DESKTOP-D946QNA\\SQLEXPRESS;"
+        "DATABASE=emh;"
+        "Trusted_Connection=yes;"
+    ),
+}
+
+
+def cargar_configuracion():
+    """Lee la configuración desde config.json. Si no existe, genera uno por defecto."""
+    if not os.path.exists(ARCHIVO_CONFIG_JSON):
+        try:
+            with open(ARCHIVO_CONFIG_JSON, "w", encoding="utf-8") as f:
+                json.dump(CONFIG_POR_DEFECTO, f, indent=4)
+            logging.info(
+                f"[CONFIG] Archivo '{ARCHIVO_CONFIG_JSON}' no existía. Creado con parámetros por defecto."
+            )
+            return CONFIG_POR_DEFECTO
+        except Exception as e:
+            logging.error(f"[CONFIG] Error al crear {ARCHIVO_CONFIG_JSON}: {e}")
+            return CONFIG_POR_DEFECTO
+
+    try:
+        with open(ARCHIVO_CONFIG_JSON, "r", encoding="utf-8") as f:
+            config = json.load(f)
+            logging.info(
+                f"[CONFIG] Configuración cargada desde '{ARCHIVO_CONFIG_JSON}' (Máquina: {config.get('id_maquina', 'CELDA-01')})"
+            )
+            return config
+    except Exception as e:
+        logging.error(
+            f"[CONFIG] Error al leer {ARCHIVO_CONFIG_JSON}. Usando valores por defecto: {e}"
+        )
+        return CONFIG_POR_DEFECTO
+
+
+CONFIG = cargar_configuracion()
 
 MAPEO_LINEAS = {
     1: "Out 1",
@@ -49,33 +79,41 @@ MAPEO_LINEAS = {
 }
 
 
-def obtener_id_maquina():
-    """Lee dinámicamente el código de máquina desde el archivo local maquina_id.txt."""
-    if os.path.exists(ARCHIVO_ID_LOCAL):
-        try:
-            with open(ARCHIVO_ID_LOCAL, "r", encoding="utf-8") as f:
-                id_guardado = f.read().strip()
-                if id_guardado:
-                    logging.info(
-                        f"[CONFIG] ID cargado desde '{ARCHIVO_ID_LOCAL}': {id_guardado}"
-                    )
-                    return id_guardado
-        except Exception as e:
-            logging.error(f"[CONFIG] Error al leer {ARCHIVO_ID_LOCAL}: {e}")
+def autodetectar_puerto_com():
+    """Escanea los puertos serie de la PC para detectar el convertidor USB-Serial activo."""
+    puertos = list(serial.tools.list_ports.comports())
+    if not puertos:
+        logging.warning("[PUERTO] No se detectaron puertos COM disponibles en el sistema.")
+        return None
 
-    return "CELDA-01"
+    for p in puertos:
+        if any(
+            keyword in p.description.upper()
+            for keyword in ["USB", "SERIAL", "CH340", "FTDI", "PROLIFIC"]
+        ):
+            logging.info(
+                f"[PUERTO] Puerto detectado automáticamente: {p.device} ({p.description})"
+            )
+            return p.device
 
-
-ID_MAQUINA = obtener_id_maquina()
+    puerto_seleccionado = puertos[0].device
+    logging.info(
+        f"[PUERTO] Utilizando primer puerto activo encontrado: {puerto_seleccionado} ({puertos[0].description})"
+    )
+    return puerto_seleccionado
 
 
 class ProcesadorTramasIndustriales:
 
-    def __init__(self, puerto, baudrate, conexion_bd, id_maquina=ID_MAQUINA):
-        self.puerto = puerto
-        self.baudrate = baudrate
-        self.conexion_bd = conexion_bd
-        self.id_maquina = id_maquina
+    def __init__(self, config):
+        self.config = config
+        self.id_maquina = config.get("id_maquina", "CELDA-01")
+        self.puerto_configurado = config.get("puerto_serial", "AUTO")
+        self.baudrate = config.get("baudrate", 57600)
+        self.timeout_puerto = config.get("timeout_puerto", 0.5)
+        self.conexion_bd = config.get("cadena_conexion_bd", "")
+        self.archivo_respaldo = config.get("archivo_respaldo", "respaldo_tucker.csv")
+        self.limite_fallas = config.get("limite_fallas_consecutivas", 3)
 
         self.bd = ConectorSQLServer(
             connection_string=self.conexion_bd,
@@ -88,57 +126,57 @@ class ProcesadorTramasIndustriales:
         self.ultimo_serial_procesado = None
         self.disparos_fuera_rango = {}
 
+    def obtener_puerto_activo(self):
+        """Determina el puerto COM a usar (configuración estática o autodetección)."""
+        if str(self.puerto_configurado).upper() == "AUTO":
+            return autodetectar_puerto_com()
+        return self.puerto_configurado
+
     def inicializar_puerto(self):
+        puerto_target = self.obtener_puerto_activo()
+        if not puerto_target:
+            logging.error("[ERROR] No hay puerto COM disponible para inicializar.")
+            return None
+
         try:
             ser = serial.Serial(
-                port=self.puerto,
+                port=puerto_target,
                 baudrate=self.baudrate,
                 bytesize=serial.EIGHTBITS,
                 stopbits=serial.STOPBITS_ONE,
-                timeout=TIMEOUT_PUERTO,
+                timeout=self.timeout_puerto,
             )
             logging.info(
-                f"[OK] Puerto serie {self.puerto} enlazado correctamente."
+                f"[OK] Puerto serie {puerto_target} enlazado correctamente."
             )
             return ser
         except Exception as e:
             logging.error(
-                f"[ERROR] Interfaz física inaccesible en {self.puerto}: {e}"
+                f"[ERROR] Interfaz física inaccesible en {puerto_target}: {e}"
             )
             return None
 
     def cargar_recetas_desde_bd(self):
-        """Consulta las tolerancias en emhart.referencia_tolerancia filtrando por el código de celda."""
+        """Usa el método nativo obtener_tolerancias_activas de ConectorSQLServer."""
         if not self.bd_conectada:
             return
 
         try:
-            query = """
-                SELECT rt.salida, rt.parametro, rt.min_val, rt.max_val 
-                FROM emhart.referencia_tolerancia rt
-                INNER JOIN emhart.maquinas m ON rt.id_maquina = m.Id
-                WHERE m.IdMaquina = ? AND rt.estado = 1
-            """
-
-            if hasattr(self.bd, "conn") and self.bd.conn:
-                cursor = self.bd.conn.cursor()
-                cursor.execute(query, (self.id_maquina,))
-                filas = cursor.fetchall()
-
-                recetas_temp = {}
-                for salida, parametro, min_v, max_v in filas:
-                    salida = int(salida)
-                    if salida not in recetas_temp:
-                        recetas_temp[salida] = {}
-                    recetas_temp[salida][parametro] = {
+            tolerancias_raw = self.bd.obtener_tolerancias_activas(self.id_maquina)
+            recetas_temp = {}
+            for salida, params in tolerancias_raw.items():
+                salida_int = int(salida)
+                recetas_temp[salida_int] = {}
+                for param, (min_v, max_v) in params.items():
+                    recetas_temp[salida_int][param] = {
                         "min": min_v,
                         "max": max_v,
                     }
 
-                self.recetas_bd = recetas_temp
-                logging.info(
-                    f"[BD] Tolerancias ACTIVAS cargadas correctamente para: {self.id_maquina}"
-                )
+            self.recetas_bd = recetas_temp
+            logging.info(
+                f"[BD] Tolerancias ACTIVAS cargadas correctamente para: {self.id_maquina}"
+            )
         except Exception as e:
             logging.warning(
                 f"[BD] No se pudieron cargar las tolerancias desde BD: {e}"
@@ -254,12 +292,13 @@ class ProcesadorTramasIndustriales:
                 elevacion = 1.09
 
         else:
-             # -----------------------------------------------------------------
+            # -----------------------------------------------------------------
             # REGISTROS MÁQUINA 1 (CELDA-01) - DINÁMICO
             # -----------------------------------------------------------------
             vol_pri = round((int(valores[48]) + int(valores[49]) * 256) / 10.0, 1) if len(valores) > 49 else 0
             vol_arc = round((int(valores[44]) + int(valores[45]) * 256) / 10.0, 1) if len(valores) > 45 else 0
-             # Corriente Celda 1
+
+            # Corriente Celda 1
             corr_raw = int(valores[60]) + int(valores[61]) * 256 if len(valores) > 61 else 0
             if 1200 <= corr_raw <= 1350:
                 corriente = corr_raw
@@ -269,7 +308,8 @@ class ProcesadorTramasIndustriales:
 
             tiempo = round((int(valores[42]) + int(valores[43]) * 256) / 10.0, 1) if len(valores) > 43 else 0
             energia = int(valores[64]) + int(valores[65]) * 256 if len(valores) > 65 else 0
-             # Penetración Dinámica para Celda 1 (Elimina los -2.0 mm estáticos)
+
+            # Penetración Dinámica para Celda 1
             pen_raw = int(valores[85]) + int(valores[86]) * 256 if len(valores) > 86 else 0
             if pen_raw >= 32768:
                 pen_raw -= 65536
@@ -397,19 +437,19 @@ class ProcesadorTramasIndustriales:
                 self.bd_conectada = False
 
         df_local = pd.DataFrame([data])
-        header_needed = not os.path.exists(ARCHIVO_RESPALDO)
+        header_needed = not os.path.exists(self.archivo_respaldo)
         df_local.to_csv(
-            ARCHIVO_RESPALDO, mode="a", index=False, header=header_needed
+            self.archivo_respaldo, mode="a", index=False, header=header_needed
         )
-        return f"ALMACENADO LOCALMENTE EN RESPALDO ({ARCHIVO_RESPALDO})"
+        return f"ALMACENADO LOCALMENTE EN RESPALDO ({self.archivo_respaldo})"
 
     def sincronizar_respaldos_locales(self):
-        if not os.path.exists(ARCHIVO_RESPALDO):
+        if not os.path.exists(self.archivo_respaldo):
             return
 
         logging.info("[SINCRONIZACIÓN] Volcando respaldos locales a SQL Server...")
         try:
-            df_respaldos = pd.read_csv(ARCHIVO_RESPALDO)
+            df_respaldos = pd.read_csv(self.archivo_respaldo)
             for _, row in df_respaldos.iterrows():
                 if str(row["Fecha"]).startswith("20"):
                     self.bd.insertar_parametros(
@@ -431,7 +471,7 @@ class ProcesadorTramasIndustriales:
                         estatus_calidad=str(row.get("estatus_calidad", "OK")),
                         detalles_fallas=row.get("detalles_fallas", None),
                     )
-            os.remove(ARCHIVO_RESPALDO)
+            os.remove(self.archivo_respaldo)
             logging.info("[SINCRONIZACIÓN] Respaldo local vaciado con éxito.")
         except Exception as e:
             logging.error(f"[SINCRONIZACIÓN] Error al sincronizar: {e}")
@@ -447,7 +487,7 @@ class ProcesadorTramasIndustriales:
             mensaje_fallas = f"\n ⚠️ [DESVIACIONES]  {data['detalles_fallas']}\n"
 
         alerta_disparos = ""
-        if data["Contador_Fallas_Consecutivas"] >= LIMITE_FALLAS_CONSECUTIVAS:
+        if data["Contador_Fallas_Consecutivas"] >= self.limite_fallas:
             alerta_disparos = (
                 f"\n 🚨 [ALERTA CRÍTICA] ¡SE DETECTARON {data['Contador_Fallas_Consecutivas']} DISPAROS CONSECUTIVOS FUERA DE RANGO!\n"
                 f"                    SE RECOMIENDA REVISAR EL PISTOLETE O LA CELDA.\n"
@@ -557,8 +597,13 @@ class ProcesadorTramasIndustriales:
                     try:
                         ser.close()
                         time.sleep(1.0)
+                        
+                        puerto_reintento = self.obtener_puerto_activo()
+                        if puerto_reintento:
+                            ser.port = puerto_reintento
+                            
                         ser.open()
-                        logging.info("[COMUNICACIÓN] Puerto serie reiniciado correctamente.")
+                        logging.info(f"[COMUNICACIÓN] Puerto serie {ser.port} reiniciado correctamente.")
                     except Exception as re_err:
                         logging.error(f"[COMUNICACIÓN] No se pudo reabrir el puerto serie: {re_err}")
 
@@ -574,15 +619,14 @@ class ProcesadorTramasIndustriales:
 
 
 if __name__ == "__main__":
-    if os.path.exists(ARCHIVO_RESPALDO):
+    archivo_respaldo = CONFIG.get("archivo_respaldo", "respaldo_tucker.csv")
+    if os.path.exists(archivo_respaldo):
         try:
-            os.remove(ARCHIVO_RESPALDO)
+            os.remove(archivo_respaldo)
         except Exception:
             pass
 
-    logging.info(f"Iniciando monitoreo activo para: {ID_MAQUINA}")
+    logging.info(f"Iniciando monitoreo activo para: {CONFIG.get('id_maquina')}")
 
-    procesador = ProcesadorTramasIndustriales(
-        PUERTO_SERIAL, BAUDRATE, CADENA_CONEXION_BD, ID_MAQUINA
-    )
+    procesador = ProcesadorTramasIndustriales(CONFIG)
     procesador.ejecutar_monitoreo()
