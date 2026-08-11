@@ -7,7 +7,7 @@ import time
 import pandas as pd
 import serial
 import serial.tools.list_ports
-from conector import ConectorSQLServer
+from conexion import ConectorSQLServer
 
 # =====================================================================
 # CONFIGURACIÓN DEL SISTEMA DE LOGGING
