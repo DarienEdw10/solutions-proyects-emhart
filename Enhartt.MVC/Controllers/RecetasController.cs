@@ -31,7 +31,7 @@ public class RecetasController : Controller
     private async Task<IActionResult> CargarVistaRecetasAsync()
     {
         var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
-        
+
         var celdas = maquinas
             .Where(m => !string.IsNullOrEmpty(m.Celda))
             .GroupBy(m => m.Celda!)
@@ -48,7 +48,7 @@ public class RecetasController : Controller
 
             foreach (var maquina in celdaKVP.Value)
             {
-                // Obtenemos los registros COMPLETOS de la tabla de recetas (con MinVal, MaxVal, Parametro, etc.)
+                // Obtenemos los registros COMPLETOS de la tabla de recetas
                 var recetasDb = await repository.ObtenerRecetasPorMaquinaAsync(maquina.Id) ?? [];
 
                 maquinasVM.Add(new MaquinaViewModel
@@ -80,5 +80,82 @@ public class RecetasController : Controller
         {
             Celdas = celdasVM
         });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Guardar([FromBody] GuardarRecetaDto dto)
+    {
+        if (dto == null || dto.Parametros.Count == 0)
+        {
+            return BadRequest(new { success = false, message = "No se recibieron parámetros válidos para guardar." });
+        }
+
+        try
+        {
+            string usuario = User?.Identity?.Name ?? "Usuario_Web";
+
+            // Convertir el string de salida a int si tu entidad Receta maneja Salida como int
+            int.TryParse(dto.Salida, out int numSalida);
+
+            foreach (var p in dto.Parametros)
+            {
+                var recetaAActualizar = new Enhartt.Domain.Models.Receta
+                {
+                    IdMaquina = dto.IdMaquina,
+                    Salida = numSalida,
+                    Parametro = p.Parametro,
+                    MinVal = p.MinVal,
+                    MaxVal = p.MaxVal
+                };
+
+                // Llamada al método real de tu IRepository
+                await repository.ActualizarRecetaAsync(recetaAActualizar, usuario);
+            }
+
+            return Json(new { success = true, message = "Los límites de calidad fueron guardados correctamente." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = $"Error en el servidor: {ex.Message}" });
+        }
+    }
+    [HttpGet]
+    public async Task<IActionResult> ObtenerAuditoria(int? idMaquina, string? salida, DateTime? fechaInicio, DateTime? fechaFin)
+    {
+        try
+        {
+            var historial = await repository.ObtenerAuditoriaRecetasAsync(idMaquina, salida, fechaInicio, fechaFin);
+
+            var resultadoDto = historial.Select(h => new
+            {
+                Fecha = (h.FechaModificacion ?? h.FechaCreacion).ToString("yyyy-MM-dd HH:mm:ss"),
+                Salida = h.Salida,
+                Parametro = h.Parametro ?? "Límite Control",
+                MinVal = h.MinVal,
+                MaxVal = h.MaxVal,
+                Estado = h.Estado ? "ACTIVO" : "INACTIVO",
+                Usuario = string.IsNullOrEmpty(h.ModificadoPor) ? "SISTEMA_INICIAL" : h.ModificadoPor
+            });
+
+            return Json(new { success = true, data = resultadoDto });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = $"Error al obtener auditoría: {ex.Message}" });
+        }
+    }
+
+    public class GuardarRecetaDto
+    {
+        public int IdMaquina { get; set; }
+        public string Salida { get; set; } = string.Empty;
+        public List<ParametroLimiteDto> Parametros { get; set; } = [];
+    }
+
+    public class ParametroLimiteDto
+    {
+        public string Parametro { get; set; } = string.Empty;
+        public double MinVal { get; set; }
+        public double MaxVal { get; set; }
     }
 }
