@@ -1,17 +1,27 @@
 let chartSPC = null;
 let paginaActual = 1;
-const registrosPorPagina = 5; // <-- Cambiado de 10 a 5 para no saturar
+const registrosPorPagina = 5;
 let datosCache = [];
 
 document.addEventListener('DOMContentLoaded', function () {
     cargarCeldas();
     inicializarGrafica();
     cargarDatos(1);
+
+    // Escuchar cambios en el filtro de celda para actualizar la tarjeta superior
+    const selectCelda = document.getElementById('filtro-celda');
+    if (selectCelda) {
+        selectCelda.addEventListener('change', function () {
+            actualizarTarjetaCeldaFiltrada();
+        });
+    }
 });
 
-// Cargar catálogo de celdas
+// Cargar catálogo de celdas en el selector superior
 async function cargarCeldas() {
     const select = document.getElementById('filtro-celda');
+    if (!select) return;
+
     try {
         const response = await fetch('/Home/ObtenerCeldas');
         const celdas = await response.json();
@@ -19,83 +29,75 @@ async function cargarCeldas() {
         select.innerHTML = '<option value="">-- Todas las Celdas --</option>';
         celdas.forEach(c => {
             const option = document.createElement('option');
-            option.value = c.id;
-            option.textContent = `${c.celda} (${c.idMaquina})`;
+            option.value = c.id || c.Id;
+            option.textContent = `${c.celda || c.Celda} (${c.idMaquina || c.IdMaquina})`;
             select.appendChild(option);
         });
     } catch (e) {
         select.innerHTML = '<option value="">-- Error al cargar --</option>';
     }
 }
-// Cargar tarjetas superiores dinámicas según el catálogo de Celdas
-async function cargarEstadoCeldas() {
-    const contenedor = document.getElementById('contenedor-estado-celdas');
-    try {
-        const response = await fetch('/Home/ObtenerCeldas');
-        const celdas = await response.json();
 
-        if (!celdas || celdas.length === 0) {
-            contenedor.innerHTML = '<div class="col-12 text-muted small text-center">No hay celdas registradas.</div>';
-            return;
-        }
+// Actualizar el texto y estado de la ÚNICA tarjeta dinámica según la Celda Filtrada
+function actualizarTarjetaCeldaFiltrada() {
+    const selectCelda = document.getElementById('filtro-celda');
+    const lblNombre = document.getElementById('lbl-celda-activa-nombre');
+    const lblId = document.getElementById('lbl-celda-activa-id');
 
-        contenedor.innerHTML = '';
-        celdas.forEach(c => {
-            const col = document.createElement('div');
-            col.className = 'col-12 col-md-6 col-xl-4';
+    if (!selectCelda || !lblNombre || !lblId) return;
 
-            col.innerHTML = `
-                <div class="card border-0 shadow-sm p-3 bg-white border-start border-success border-4 h-100">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <span class="text-muted small fw-bold text-uppercase d-block">Celda Operativa</span>
-                            <h5 class="fw-bold mb-0 text-dark">${c.celda}</h5>
-                            <small class="text-muted">${c.idMaquina}</small>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge bg-success mb-1">🟢 OPERANDO</span>
-                            <div class="small text-muted font-monospace">Último disparo: Activo</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            contenedor.appendChild(col);
-        });
-    } catch (e) {
-        contenedor.innerHTML = '<div class="col-12 text-danger small text-center">Error al cargar estado de celdas.</div>';
+    const idSeleccionado = selectCelda.value;
+    const textoOption = selectCelda.options[selectCelda.selectedIndex]?.text || "";
+
+    if (!idSeleccionado) {
+        lblNombre.innerText = "TODAS LAS CELDAS";
+        lblId.innerText = "MONITOREO GLOBAL";
+    } else {
+        lblNombre.innerText = textoOption.toUpperCase();
+        lblId.innerText = `MÁQUINA SELECCIONADA (ID: ${idSeleccionado})`;
     }
 }
 
-// Llamar al iniciar la página en DOMContentLoaded
-document.addEventListener('DOMContentLoaded', function () {
-    cargarEstadoCeldas(); // <-- Carga celdas reales arriba
-    cargarCeldas();       // <-- Carga dropdown de filtros
-    inicializarGrafica();
-    cargarDatos(1);
-});
-
-// Cargar telemetría paginada de 5 en 5
+// Cargar telemetría paginada de forma segura
 async function cargarDatos(pagina = 1) {
     paginaActual = pagina;
 
-    const idMaquina = document.getElementById('filtro-celda').value;
-    const estatus = document.getElementById('filtro-estatus').value;
-    const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
-    const fechaFin = document.getElementById('filtro-fecha-fin').value;
-    const busqueda = document.getElementById('buscador-global').value;
+    const selectCelda = document.getElementById('filtro-celda');
+    const idMaquina = selectCelda ? selectCelda.value : '';
+    const estatus = document.getElementById('filtro-estatus')?.value || '';
+    const fechaInicio = document.getElementById('filtro-fecha-inicio')?.value || '';
+    const fechaFin = document.getElementById('filtro-fecha-fin')?.value || '';
+    const busqueda = document.getElementById('buscador-global')?.value || '';
 
-    const url = `/Home/ObtenerParametros?identificadorId=${idMaquina}&estatus=${estatus}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&busqueda=${busqueda}&pagina=${pagina}&registrosPorPagina=${registrosPorPagina}`;
+    actualizarTarjetaCeldaFiltrada();
+
+    const url = `/Home/ObtenerParametros?identificadorId=${idMaquina}&estatus=${estatus}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&busqueda=${encodeURIComponent(busqueda)}&pagina=${pagina}&registrosPorPagina=${registrosPorPagina}`;
 
     try {
         const response = await fetch(url);
         const result = await response.json();
 
         if (result.success) {
-            datosCache = result.data;
+            datosCache = result.data || [];
+            
+            // 1. Renderizar KPIs
             renderizarKPIs(result.kpis);
-            renderizarTabla(result.data);
-            renderizarPaginacion(result.paginaActual, result.totalPaginas, result.total);
-            actualizarGraficaSPC(result.data);
+
+            // 2. Renderizar Tabla y Paginación (Se ejecutan con prioridad)
+            renderizarTabla(datosCache);
+            
+            const totalReg = result.total ?? result.Total ?? datosCache.length;
+            const totalPag = result.totalPaginas ?? result.TotalPaginas ?? Math.ceil(totalReg / registrosPorPagina);
+            const pagAct = result.paginaActual ?? result.PaginaActual ?? pagina;
+
+            renderizarPaginacion(pagAct, totalPag, totalReg);
+
+            // 3. Renderizar Gráfica SPC protegida
+            try {
+                actualizarGraficaSPC(datosCache);
+            } catch (errChart) {
+                console.warn("Advertencia al actualizar gráfica SPC:", errChart);
+            }
         }
     } catch (error) {
         console.error("Error al cargar datos:", error);
@@ -107,14 +109,25 @@ function aplicarFiltros() {
 }
 
 function renderizarKPIs(kpis) {
-    document.getElementById('lbl-total-disparos').innerText = kpis.totalDisparos;
-    document.getElementById('lbl-calidad-ok').innerText = kpis.calidadOk;
-    document.getElementById('lbl-desviaciones-nok').innerText = kpis.desviacionesNok;
-    document.getElementById('lbl-efectividad-ftt').innerText = kpis.efectividadFtt + '%';
+    if (!kpis) return;
+
+    const elTotal = document.getElementById('lbl-total-disparos');
+    const elOk = document.getElementById('lbl-calidad-ok');
+    const elNok = document.getElementById('lbl-desviaciones-nok');
+    const elFtt = document.getElementById('lbl-efectividad-ftt');
+
+    if (elTotal) elTotal.innerText = kpis.totalDisparos ?? kpis.TotalDisparos ?? 0;
+    if (elOk) elOk.innerText = kpis.calidadOk ?? kpis.CalidadOk ?? 0;
+    if (elNok) elNok.innerText = kpis.desviacionesNok ?? kpis.DesviacionesNok ?? 0;
+    
+    // Si la tarjeta de efectividad cambió por la de Cpk en el HTML, no romperá el JS
+    if (elFtt) elFtt.innerText = (kpis.efectividadFtt ?? kpis.EfectividadFtt ?? 0) + '%';
 }
 
 function renderizarTabla(registros) {
     const tbody = document.getElementById('tabla-body');
+    if (!tbody) return;
+
     tbody.innerHTML = '';
 
     if (!registros || registros.length === 0) {
@@ -127,20 +140,24 @@ function renderizarTabla(registros) {
         tr.style.cursor = 'pointer';
         tr.onclick = () => abrirModalDetalle(r);
 
-        const isOk = r.estatusCalidad === 'OK' || r.estatusCalidad === 'Solo OK';
+        const estatusVal = r.estatusCalidad || r.EstatusCalidad || r.estatus || r.Estatus || '';
+        const isOk = estatusVal === 'OK' || estatusVal === 'Solo OK';
+        const numSolVal = r.numSol ?? r.NumSol ?? r.idRegistro ?? r.IdRegistro ?? 0;
+        const celdaVal = r.celda || r.Celda || 'N/A';
+        const fechaVal = r.fechaFormatted || r.FechaFormatted || r.fecha || r.Fecha || '-';
 
         tr.innerHTML = `
-            <td class="small font-monospace">${r.fechaFormatted}</td>
-            <td><span class="badge bg-secondary">${r.celda}</span></td>
-            <td>Salida ${r.salida || 1}</td>
-            <td>Turno ${r.turno || 1}</td>
-            <td class="fw-bold text-primary">#${r.numSol || r.idRegistro}</td>
-            <td><strong>${r.corriente || 0}</strong> A</td>
-            <td>${r.energia || 0} J</td>
-            <td>${r.tiempo || 0} ms</td>
-            <td>${r.penetracion || 0} mm</td>
+            <td class="small font-monospace">${fechaVal}</td>
+            <td><span class="badge bg-secondary">${celdaVal}</span></td>
+            <td>Salida ${r.salida ?? r.Salida ?? 1}</td>
+            <td>Turno ${r.turno ?? r.Turno ?? 1}</td>
+            <td class="fw-bold text-primary">#${numSolVal}</td>
+            <td><strong>${r.corriente ?? r.Corriente ?? 0}</strong> A</td>
+            <td>${r.energia ?? r.Energia ?? 0} J</td>
+            <td>${r.tiempo ?? r.Tiempo ?? 0} ms</td>
+            <td>${r.penetracion ?? r.Penetracion ?? 0} mm</td>
             <td><span class="badge ${isOk ? 'bg-success' : 'bg-danger'}">${isOk ? '🟢 OK' : '🔴 NOK'}</span></td>
-            <td class="small text-muted">${r.detallesFallas}</td>
+            <td class="small text-muted">${r.detallesFallas || r.DetallesFallas || ''}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -150,30 +167,28 @@ function renderizarPaginacion(actual, totalPaginas, totalRegistros) {
     const lblInfo = document.getElementById('lbl-paginacion-info');
     const ul = document.getElementById('ul-paginacion');
 
-    const inicio = (actual - 1) * registrosPorPagina + 1;
+    if (!lblInfo || !ul) return;
+
+    const inicio = totalRegistros > 0 ? (actual - 1) * registrosPorPagina + 1 : 0;
     const fin = Math.min(actual * registrosPorPagina, totalRegistros);
-    lblInfo.innerText = `Mostrando ${totalRegistros > 0 ? inicio : 0}-${fin} de ${totalRegistros} registros`;
+    lblInfo.innerText = `Mostrando ${inicio}-${fin} de ${totalRegistros} registros`;
 
     ul.innerHTML = '';
     if (totalPaginas <= 1) return;
 
-    // Rango de páginas a mostrar alrededor de la actual (ej. 2 atrás, 2 adelante)
     const maxVisibles = 2;
     let inicioPag = Math.max(1, actual - maxVisibles);
     let finPag = Math.min(totalPaginas, actual + maxVisibles);
 
-    // Botón "Primero / Anterior"
     if (actual > 1) {
         ul.appendChild(crearItemPaginacion('«', 1));
         ul.appendChild(crearItemPaginacion('‹', actual - 1));
     }
 
-    // Puntos suspensivos si hay páginas antes
     if (inicioPag > 1) {
         ul.appendChild(crearItemInactivo('...'));
     }
 
-    // Páginas numéricas acotadas
     for (let i = inicioPag; i <= finPag; i++) {
         const li = document.createElement('li');
         li.className = `page-item ${i === actual ? 'active' : ''}`;
@@ -181,12 +196,10 @@ function renderizarPaginacion(actual, totalPaginas, totalRegistros) {
         ul.appendChild(li);
     }
 
-    // Puntos suspensivos si hay páginas después
     if (finPag < totalPaginas) {
         ul.appendChild(crearItemInactivo('...'));
     }
 
-    // Botón "Siguiente / Último"
     if (actual < totalPaginas) {
         ul.appendChild(crearItemPaginacion('›', actual + 1));
         ul.appendChild(crearItemPaginacion('»', totalPaginas));
@@ -206,30 +219,27 @@ function crearItemInactivo(texto) {
     li.innerHTML = `<span class="page-link">${texto}</span>`;
     return li;
 }
+
 // -------------------------------------------------------------
 // FUNCIONES DE EXPORTACIÓN (EXCEL / PDF)
 // -------------------------------------------------------------
-// Exportar el 100% de los registros filtrados a Excel (.CSV)
 function exportarExcel() {
-    const idMaquina = document.getElementById('filtro-celda').value;
-    const estatus = document.getElementById('filtro-estatus').value;
-    const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
-    const fechaFin = document.getElementById('filtro-fecha-fin').value;
-    const busqueda = document.getElementById('buscador-global').value;
+    const idMaquina = document.getElementById('filtro-celda')?.value || '';
+    const estatus = document.getElementById('filtro-estatus')?.value || '';
+    const fechaInicio = document.getElementById('filtro-fecha-inicio')?.value || '';
+    const fechaFin = document.getElementById('filtro-fecha-fin')?.value || '';
+    const busqueda = document.getElementById('buscador-global')?.value || '';
 
     const url = `/Home/ExportarExcel?identificadorId=${idMaquina}&estatus=${estatus}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&busqueda=${encodeURIComponent(busqueda)}`;
-    
-    // Descargar el archivo directamente desde el servidor
     window.location.href = url;
 }
 
-// Exportar el 100% de los registros filtrados a PDF / Vista de Impresión
 async function exportarPDF() {
-    const idMaquina = document.getElementById('filtro-celda').value;
-    const estatus = document.getElementById('filtro-estatus').value;
-    const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
-    const fechaFin = document.getElementById('filtro-fecha-fin').value;
-    const busqueda = document.getElementById('buscador-global').value;
+    const idMaquina = document.getElementById('filtro-celda')?.value || '';
+    const estatus = document.getElementById('filtro-estatus')?.value || '';
+    const fechaInicio = document.getElementById('filtro-fecha-inicio')?.value || '';
+    const fechaFin = document.getElementById('filtro-fecha-fin')?.value || '';
+    const busqueda = document.getElementById('buscador-global')?.value || '';
 
     const url = `/Home/ObtenerTodosParaImpresion?identificadorId=${idMaquina}&estatus=${estatus}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&busqueda=${encodeURIComponent(busqueda)}`;
 
@@ -243,24 +253,22 @@ async function exportarPDF() {
         }
 
         const registros = result.data;
-
-        // Construcción de la tabla completa para la ventana de impresión
         let filasHtml = '';
         registros.forEach(r => {
-            const isOk = r.estatusCalidad === 'OK' || r.estatusCalidad === 'Solo OK';
+            const isOk = (r.estatusCalidad || r.EstatusCalidad) === 'OK' || (r.estatusCalidad || r.EstatusCalidad) === 'Solo OK';
             filasHtml += `
                 <tr>
-                    <td style="font-size: 11px;">${r.fechaFormatted}</td>
-                    <td>${r.celda}</td>
-                    <td>Salida ${r.salida}</td>
-                    <td>Turno ${r.turno}</td>
-                    <td><b>#${r.numSol}</b></td>
-                    <td><b>${r.corriente}</b> A</td>
-                    <td>${r.energia} J</td>
-                    <td>${r.tiempo} ms</td>
-                    <td>${r.penetracion} mm</td>
+                    <td style="font-size: 11px;">${r.fechaFormatted || r.FechaFormatted}</td>
+                    <td>${r.celda || r.Celda}</td>
+                    <td>Salida ${r.salida || r.Salida}</td>
+                    <td>Turno ${r.turno || r.Turno}</td>
+                    <td><b>#${r.numSol || r.NumSol}</b></td>
+                    <td><b>${r.corriente || r.Corriente}</b> A</td>
+                    <td>${r.energia || r.Energia} J</td>
+                    <td>${r.tiempo || r.Tiempo} ms</td>
+                    <td>${r.penetracion || r.Penetracion} mm</td>
                     <td><span class="badge ${isOk ? 'bg-success' : 'bg-danger'}">${isOk ? 'OK' : 'NOK'}</span></td>
-                    <td style="font-size: 11px;">${r.detallesFallas}</td>
+                    <td style="font-size: 11px;">${r.detallesFallas || r.DetallesFallas}</td>
                 </tr>
             `;
         });
@@ -314,7 +322,68 @@ async function exportarPDF() {
     }
 }
 
-// Gráfica SPC y Modal
+// -------------------------------------------------------------
+// CONTROL ESTADÍSTICO DE PROCESO (SPC) Y GRÁFICA
+// -------------------------------------------------------------
+function calcularIndicadoresSPC(datos, usl = 1330, lsl = 1270) {
+    if (!datos || datos.length === 0) {
+        return { cp: 0, cpk: 0, media: 0, ucl: usl, lcl: lsl };
+    }
+
+    const corrientes = datos.map(r => parseFloat(r.corriente ?? r.Corriente) || 0).filter(c => c > 0);
+    if (corrientes.length === 0) return { cp: 0, cpk: 0, media: 0, ucl: usl, lcl: lsl };
+
+    // 1. Media (X̄)
+    const media = corrientes.reduce((acc, v) => acc + v, 0) / corrientes.length;
+
+    // 2. Desviación Estándar (σ)
+    const varianza = corrientes.reduce((acc, v) => acc + Math.pow(v - media, 2), 0) / (corrientes.length > 1 ? corrientes.length - 1 : 1);
+    const sigma = Math.sqrt(varianza) || 0.0001;
+
+    // 3. Cp y Cpk
+    const cp = (usl - lsl) / (6 * sigma);
+    const cpu = (usl - media) / (3 * sigma);
+    const cpl = (media - lsl) / (3 * sigma);
+    const cpk = Math.min(cpu, cpl);
+
+    // 4. Límites de Control Estadístico (3-Sigma)
+    const ucl = media + (3 * sigma);
+    const lcl = media - (3 * sigma);
+
+    return {
+        cp: parseFloat(cp.toFixed(2)),
+        cpk: parseFloat(cpk.toFixed(2)),
+        media: parseFloat(media.toFixed(1)),
+        ucl: parseFloat(ucl.toFixed(1)),
+        lcl: parseFloat(lcl.toFixed(1))
+    };
+}
+
+function actualizarGraficaSPC(registros) {
+    if (!chartSPC) return;
+
+    const ultimos = [...registros].reverse();
+    const spcStats = calcularIndicadoresSPC(ultimos);
+
+    const lblCp = document.getElementById('lbl-spc-cp');
+    const lblCpk = document.getElementById('lbl-spc-cpk');
+    if (lblCp) lblCp.innerText = spcStats.cp;
+    if (lblCpk) {
+        lblCpk.innerText = spcStats.cpk;
+        lblCpk.className = `h3 mb-0 fw-bold ${spcStats.cpk >= 1.33 ? 'text-success' : (spcStats.cpk >= 1.0 ? 'text-warning' : 'text-danger')}`;
+    }
+
+    chartSPC.data.labels = ultimos.map(r => `#${r.numSol || r.NumSol || r.idRegistro || r.IdRegistro}`);
+    chartSPC.data.datasets[0].data = ultimos.map(r => r.corriente ?? r.Corriente ?? 0);
+    chartSPC.data.datasets[1].data = ultimos.map(() => 1330);
+    chartSPC.data.datasets[2].data = ultimos.map(() => 1270);
+    chartSPC.data.datasets[3].data = ultimos.map(() => spcStats.media);
+    chartSPC.data.datasets[4].data = ultimos.map(() => spcStats.ucl);
+    chartSPC.data.datasets[5].data = ultimos.map(() => spcStats.lcl);
+
+    chartSPC.update();
+}
+
 function inicializarGrafica() {
     const ctx = document.getElementById('graficaControl')?.getContext('2d');
     if (!ctx) return;
@@ -333,18 +402,42 @@ function inicializarGrafica() {
                     tension: 0.2
                 },
                 {
-                    label: 'Límite Máx (Max)',
+                    label: 'USL Tolerancia (1330A)',
                     data: [],
                     borderColor: '#dc3545',
-                    borderDash: [5, 5],
+                    borderDash: [4, 4],
                     fill: false,
                     pointRadius: 0
                 },
                 {
-                    label: 'Límite Mín (Min)',
+                    label: 'LSL Tolerancia (1270A)',
+                    data: [],
+                    borderColor: '#dc3545',
+                    borderDash: [4, 4],
+                    fill: false,
+                    pointRadius: 0
+                },
+                {
+                    label: 'Media Process (X̄)',
+                    data: [],
+                    borderColor: '#198754',
+                    borderDash: [2, 2],
+                    fill: false,
+                    pointRadius: 0
+                },
+                {
+                    label: 'UCL (Control +3σ)',
                     data: [],
                     borderColor: '#ffc107',
-                    borderDash: [5, 5],
+                    borderDash: [6, 2],
+                    fill: false,
+                    pointRadius: 0
+                },
+                {
+                    label: 'LCL (Control -3σ)',
+                    data: [],
+                    borderColor: '#ffc107',
+                    borderDash: [6, 2],
                     fill: false,
                     pointRadius: 0
                 }
@@ -359,42 +452,32 @@ function inicializarGrafica() {
     });
 }
 
-function actualizarGraficaSPC(registros) {
-    if (!chartSPC) return;
-
-    const ultimos = [...registros].reverse();
-    chartSPC.data.labels = ultimos.map(r => `#${r.numSol || r.idRegistro}`);
-    chartSPC.data.datasets[0].data = ultimos.map(r => r.corriente || 0);
-    chartSPC.data.datasets[1].data = ultimos.map(() => 1330);
-    chartSPC.data.datasets[2].data = ultimos.map(() => 1270);
-    chartSPC.update();
-}
-
 function abrirModalDetalle(r) {
-    document.getElementById('modal-num-sol').innerText = `#${r.numSol || r.idRegistro}`;
-    document.getElementById('modal-serial').innerText = r.serialTrazabilidad || 'N/A';
-    document.getElementById('modal-fecha').innerText = r.fechaFormatted;
+    document.getElementById('modal-num-sol').innerText = `#${r.numSol || r.NumSol || r.idRegistro || r.IdRegistro}`;
+    document.getElementById('modal-serial').innerText = r.serialTrazabilidad || r.SerialTrazabilidad || 'N/A';
+    document.getElementById('modal-fecha').innerText = r.fechaFormatted || r.FechaFormatted || r.fecha || r.Fecha;
 
-    const isOk = r.estatusCalidad === 'OK' || r.estatusCalidad === 'Solo OK';
+    const estatusVal = r.estatusCalidad || r.EstatusCalidad || r.estatus || r.Estatus || '';
+    const isOk = estatusVal === 'OK' || estatusVal === 'Solo OK';
     document.getElementById('modal-estatus-badge').innerHTML = `<span class="badge fs-6 ${isOk ? 'bg-success' : 'bg-danger'}">${isOk ? '🟢 OK' : '🔴 NOK'}</span>`;
 
-    document.getElementById('modal-volarc').innerText = r.volArc || 0;
-    document.getElementById('modal-volpri').innerText = r.volPri || 0;
-    document.getElementById('modal-corriente').innerText = r.corriente || 0;
-    document.getElementById('modal-energia').innerText = r.energia || 0;
-    document.getElementById('modal-tiempo').innerText = r.tiempo || 0;
-    document.getElementById('modal-penetracion').innerText = r.penetracion || 0;
-    document.getElementById('modal-elevacion').innerText = r.elevacion || 0;
-    document.getElementById('modal-lonper').innerText = r.lonPer || 0;
+    document.getElementById('modal-volarc').innerText = r.volArc ?? r.VolArc ?? 0;
+    document.getElementById('modal-volpri').innerText = r.volPri ?? r.VolPri ?? 0;
+    document.getElementById('modal-corriente').innerText = r.corriente ?? r.Corriente ?? 0;
+    document.getElementById('modal-energia').innerText = r.energia ?? r.Energia ?? 0;
+    document.getElementById('modal-tiempo').innerText = r.tiempo ?? r.Tiempo ?? 0;
+    document.getElementById('modal-penetracion').innerText = r.penetracion ?? r.Penetracion ?? 0;
+    document.getElementById('modal-elevacion').innerText = r.elevacion ?? r.Elevacion ?? 0;
+    document.getElementById('modal-lonper').innerText = r.lonPer ?? r.LonPer ?? 0;
 
-    document.getElementById('modal-err').innerText = `Err: ${r.err || 0}`;
-    document.getElementById('modal-alarma').innerText = `Alarma: ${r.alarma || 0}`;
-    document.getElementById('modal-modo').innerText = `Modo: Auto (${r.modo || 1})`;
+    document.getElementById('modal-err').innerText = `Err: ${r.err ?? r.Err ?? 0}`;
+    document.getElementById('modal-alarma').innerText = `Alarma: ${r.alarma ?? r.Alarma ?? 0}`;
+    document.getElementById('modal-modo').innerText = `Modo: Auto (${r.modo ?? r.Modo ?? 1})`;
 
     const alertDiv = document.getElementById('modal-alert-desviaciones');
     if (!isOk) {
         alertDiv.classList.remove('d-none');
-        document.getElementById('modal-detalles-fallas').innerText = r.detallesFallas;
+        document.getElementById('modal-detalles-fallas').innerText = r.detallesFallas || r.DetallesFallas || 'Sin detalle especificado';
     } else {
         alertDiv.classList.add('d-none');
     }
