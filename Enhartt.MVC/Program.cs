@@ -9,25 +9,21 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Inyeccion de dependencias sqlserver
+// Inyección de dependencias SQL Server
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(
     builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Inyeccion de dependencias con respecto al repositorio
+// Inyección de dependencias de Repositorio y Servicios
 builder.Services.AddScoped<IRepository, Repository>();
-
-// Inyeccion de dependencias con respecto al servicio
 builder.Services.AddScoped<EnharttService>();
 
-// 1. Configuración de Autenticación de Windows (Directorio Activo / Sesión de PC)
+// 1. Configuración de Autenticación de Windows
 builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
     .AddNegotiate();
 
-builder.Services.AddAuthorization(options =>
-{
-    // Por defecto autentica las peticiones
-    options.FallbackPolicy = options.DefaultPolicy;
-});
+// Se habilita autorización SIN FallbackPolicy global
+// (La autenticación se exigirá únicamente donde pongas [Authorize])
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -36,14 +32,14 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
 
-// 2. Middlewares de Seguridad (¡UseAuthentication SIEMPRE va antes de UseAuthorization!)
+// 2. Middlewares de Seguridad en orden correcto
 app.UseAuthentication();
 app.UseAuthorization();
 

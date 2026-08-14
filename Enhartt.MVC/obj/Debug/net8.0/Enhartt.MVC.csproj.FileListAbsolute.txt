@@ -150,3 +150,9 @@ C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Debug\net8.0\System.Director
 C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Debug\net8.0\runtimes\linux\lib\net8.0\System.DirectoryServices.Protocols.dll
 C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Debug\net8.0\runtimes\osx\lib\net8.0\System.DirectoryServices.Protocols.dll
 C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.DirectoryServices.Protocols.dll
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Debug\net8.0\Enhartt.MVC-Publicacion\web.config
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Debug\net8.0\Enhartt.MVC-Publicacion\appsettings.Development.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Debug\net8.0\Enhartt.MVC-Publicacion\appsettings.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Debug\net8.0\Enhartt.MVC-Publicacion\Enhartt.MVC.deps.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Debug\net8.0\Enhartt.MVC-Publicacion\Enhartt.MVC.runtimeconfig.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Debug\net8.0\Enhartt.MVC-Publicacion\Enhartt.MVC.staticwebassets.endpoints.json
