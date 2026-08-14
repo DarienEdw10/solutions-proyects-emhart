@@ -24,9 +24,52 @@ namespace Enhartt.Domain.Repositories
                                  .ToListAsync();
         }
 
+        // Lógica de historial: Desactiva recetas anteriores y crea el nuevo registro activo
+        public async Task ActualizarRecetaConHistorialAsync(Receta nuevaReceta, string usuario)
+        {
+            string paramLimpio = nuevaReceta.Parametro?.Trim() ?? "";
+
+            // 1. Desactivar todos los registros previos de ese mismo parámetro/salida/máquina
+            var recetasAnteriores = await _context.Receta
+                .Where(r => r.IdMaquina == nuevaReceta.IdMaquina &&
+                            r.Salida == nuevaReceta.Salida &&
+                            r.Parametro != null &&
+                            r.Parametro.Trim() == paramLimpio &&
+                            r.Estado == true)
+                .ToListAsync();
+
+            foreach (var recetaVieja in recetasAnteriores)
+            {
+                recetaVieja.Estado = false;
+                recetaVieja.FechaModificacion = DateTime.Now;
+                recetaVieja.ModificadoPor = usuario;
+            }
+
+            // 2. Insertar el nuevo registro que ahora será el único ACTIVO
+            nuevaReceta.Estado = true;
+            nuevaReceta.FechaCreacion = DateTime.Now;
+            nuevaReceta.ModificadoPor = usuario;
+
+            await _context.Receta.AddAsync(nuevaReceta);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task<Receta?> ActualizarRecetaAsync(Receta receta, string usuario)
         {
-            Receta? recetaBd = await _context.Receta.FirstOrDefaultAsync(r => r.IdReferencia == receta.IdReferencia);
+            Receta? recetaBd = null;
+
+            if (receta.IdReferencia > 0)
+            {
+                recetaBd = await _context.Receta.FirstOrDefaultAsync(r => r.IdReferencia == receta.IdReferencia);
+            }
+
+            if (recetaBd == null)
+            {
+                recetaBd = await _context.Receta.FirstOrDefaultAsync(r => 
+                    r.IdMaquina == receta.IdMaquina && 
+                    r.Salida == receta.Salida && 
+                    r.Parametro != null && r.Parametro.Trim() == receta.Parametro.Trim());
+            }
 
             if (recetaBd == null) return null;
 
@@ -36,9 +79,9 @@ namespace Enhartt.Domain.Repositories
             recetaBd.ModificadoPor = usuario;
             recetaBd.FechaModificacion = DateTime.Now;
 
-            var entityEntry = _context.Receta.Update(recetaBd);
+            _context.Receta.Update(recetaBd);
             await _context.SaveChangesAsync();
-            return entityEntry.Entity;
+            return recetaBd;
         }
 
         public async Task<Receta?> AgregarRecetaAsync(Receta receta, string usuario)
@@ -136,11 +179,11 @@ namespace Enhartt.Domain.Repositories
         // PARAMETROS (Telemetría de Soldaduras)
         // =============================================================
         private IQueryable<Parametro> ConstruirFiltroParametros(
-     int? identificadorId,
-     string? estatus,
-     DateTime? fechaInicio,
-     DateTime? fechaFin,
-     string? busqueda)
+            int? identificadorId,
+            string? estatus,
+            DateTime? fechaInicio,
+            DateTime? fechaFin,
+            string? busqueda)
         {
             var query = _context.Parametros.AsNoTracking().AsQueryable();
 

@@ -1,19 +1,33 @@
 using Enhartt.Domain.Data;
 using Enhartt.Domain.Repositories;
 using Enhartt.MVC.Services;
+using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
 // Inyeccion de dependencias sqlserver
-builder.Services.AddDbContext<AppDbContext>(options =>options.UseSqlServer(
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(
     builder.Configuration.GetConnectionString("DefaultConnection")));
+
 // Inyeccion de dependencias con respecto al repositorio
 builder.Services.AddScoped<IRepository, Repository>();
+
 // Inyeccion de dependencias con respecto al servicio
 builder.Services.AddScoped<EnharttService>();
+
+// 1. Configuración de Autenticación de Windows (Directorio Activo / Sesión de PC)
+builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
+    .AddNegotiate();
+
+builder.Services.AddAuthorization(options =>
+{
+    // Por defecto autentica las peticiones
+    options.FallbackPolicy = options.DefaultPolicy;
+});
 
 var app = builder.Build();
 
@@ -21,20 +35,18 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
-// En .NET 8 se usa UseStaticFiles() para servir los archivos de wwwroot
 app.UseStaticFiles();
 
 app.UseRouting();
 
+// 2. Middlewares de Seguridad (¡UseAuthentication SIEMPRE va antes de UseAuthorization!)
+app.UseAuthentication();
 app.UseAuthorization();
 
-// Se elimina .WithStaticAssets()
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

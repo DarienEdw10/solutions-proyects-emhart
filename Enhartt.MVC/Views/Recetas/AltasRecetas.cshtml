@@ -1,0 +1,313 @@
+@model Enhartt.MVC.Models.ViewModels.RecetasViewModel
+
+@{
+    ViewData["Title"] = "Altas de Celdas y Salidas";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-plus-square-fill text-primary me-2"></i>Altas de Celdas y Salidas
+        </h4>
+        <small class="text-muted">
+            Registro de nueva infraestructura de celdas Tucker e inicialización de pistolas en base de datos.
+        </small>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Formulario 1: Alta de Nueva Celda (Tabla Maquinas) -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-dark text-white py-3">
+                <h6 class="mb-0 fw-bold">
+                    <i class="bi bi-cpu text-success me-2"></i>1. Registrar Nueva Celda / Estación
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <!-- Field 1: Planta -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Planta / Ubicación</label>
+                    <select id="selectPlanta" class="form-select mb-2">
+                        <option value="AUTOTEK CUAUTITLÁN">AUTOTEK CUAUTITLÁN</option>
+                        <option value="NUEVO_VALOR">+ REGISTRAR OTRA PLANTA...</option>
+                    </select>
+                    <input type="text" id="txtNuevoPlanta" class="form-control d-none fw-bold"
+                           style="text-transform: uppercase;" placeholder="ESCRIBE EL NOMBRE DE LA NUEVA PLANTA">
+                </div>
+
+                <!-- Field 2: Línea -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Línea de Producción</label>
+                    <select id="selectLinea" class="form-select mb-2">
+                        <option value="LÍNEA 1">LÍNEA 1</option>
+                        <option value="LÍNEA 2">LÍNEA 2</option>
+                        <option value="NUEVO_VALOR">+ REGISTRAR OTRA LÍNEA...</option>
+                    </select>
+                    <input type="text" id="txtNuevoLinea" class="form-control d-none fw-bold"
+                           style="text-transform: uppercase;" placeholder="ESCRIBE EL NOMBRE DE LA NUEVA LÍNEA">
+                </div>
+
+                <!-- Field 3: Nombre de Celda / Proyecto -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Nombre de la Celda / Proyecto</label>
+                    <select id="selectCeldaNombre" class="form-select mb-2">
+                        <option value="">-- Seleccione Celda --</option>
+                        @if (Model?.Celdas != null)
+                        {
+                            foreach (var c in Model.Celdas)
+                            {
+                                <option value="@c.Celda">@c.Celda</option>
+                            }
+                        }
+                        <option value="NUEVO_VALOR" class="fw-bold text-primary">+ REGISTRAR NUEVA CELDA / PROYECTO...</option>
+                    </select>
+                    <input type="text" id="txtNuevoCeldaNombre" class="form-control d-none fw-bold"
+                           style="text-transform: uppercase;" placeholder="ESCRIBE EL NOMBRE DE LA NUEVA CELDA">
+                </div>
+
+                <!-- Field 4: Estación / ID Celda -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Identificador de Máquina (ID Celda / Estación)</label>
+                    <select id="selectIdMaquina" class="form-select mb-2">
+                        <option value="">-- Seleccione ID Máquina --</option>
+                        @if (Model?.Celdas != null)
+                        {
+                            var idsMaquinas = Model.Celdas.SelectMany(c => c.Maquinas).Select(m => m.IdMaquina).Where(id =>
+                            !string.IsNullOrEmpty(id)).Distinct();
+                            foreach (var id in idsMaquinas)
+                            {
+                                <option value="@id">@id</option>
+                            }
+                        }
+                        <option value="NUEVO_VALOR" class="fw-bold text-primary">+ REGISTRAR NUEVO ID MÁQUINA...</option>
+                    </select>
+                    <input type="text" id="txtNuevoIdMaquina" class="form-control d-none fw-bold"
+                           style="text-transform: uppercase;" placeholder="ESCRIBE EL NUEVO ID DE MÁQUINA (EJ. CELDA-04)">
+                </div>
+
+                <!-- Salida Inicial Seleccionable -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Número de Salida / Pistola Inicial</label>
+                    <input type="number" id="txtSalidaInicialCelda" class="form-control" value="1" min="1" max="99"
+                           placeholder="Ej. 1, 2, 4...">
+                </div>
+
+                <div class="alert alert-info py-2 small mb-0 border-start border-4 border-info">
+                    <i class="bi bi-info-circle-fill me-1"></i> Se creará el registro en la tabla <code>maquinas</code>
+                    y se inicializarán los 6 parámetros en la <b>Salida</b> configurada arriba dentro de <code>recetas</code>.
+                </div>
+            </div>
+            <div class="card-footer bg-white border-0 text-end p-3">
+                <button type="button" id="btnGuardarNuevaCelda" class="btn btn-success fw-bold px-4">
+                    <i class="bi bi-check-circle me-1"></i>Dar de Alta Celda
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario 2: Alta de Nueva Salida (Tabla Recetas) -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-dark text-white py-3">
+                <h6 class="mb-0 fw-bold">
+                    <i class="bi bi-diagram-3-fill text-primary me-2"></i>2. Agregar Salida / Pistola a Celda Existente
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Seleccionar Celda Existente</label>
+                    <select id="selectCeldaAlta" class="form-select">
+                        <option value="">-- Seleccione una Celda --</option>
+                        @if (Model?.Celdas != null)
+                        {
+                            foreach (var celda in Model.Celdas)
+                            {
+                                <option value="@celda.Celda">@celda.Celda</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Número de Salida / Pistola a Agregar</label>
+                    <input type="number" id="txtAltaNumeroSalida" class="form-control" placeholder="Ej. 2" min="1" max="99">
+                </div>
+                <div class="alert alert-warning py-2 small mb-0 border-start border-4 border-warning">
+                    <i class="bi bi-lightning-fill me-1"></i> Se agregarán los 6 parámetros físicos en la tabla
+                    <code>recetas</code> (VolArc, VolPri, Corriente, Tiempo, Penetracion, Energia) heredando los valores base de la celda.
+                </div>
+            </div>
+            <div class="card-footer bg-white border-0 text-end p-3">
+                <button type="button" id="btnGuardarNuevaSalida" class="btn btn-primary fw-bold px-4">
+                    <i class="bi bi-plus-circle me-1"></i>Dar de Alta Salida
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const celdasData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.Celdas ?? new List<Enhartt.MVC.Models.ViewModels.CeldaViewModel>()));
+
+        // Referencias de Selects e Inputs de Texto Alternativos
+        const selectPlanta = document.getElementById('selectPlanta');
+        const txtNuevoPlanta = document.getElementById('txtNuevoPlanta');
+
+        const selectLinea = document.getElementById('selectLinea');
+        const txtNuevoLinea = document.getElementById('txtNuevoLinea');
+
+        const selectCeldaNombre = document.getElementById('selectCeldaNombre');
+        const txtNuevoCeldaNombre = document.getElementById('txtNuevoCeldaNombre');
+
+        const selectIdMaquina = document.getElementById('selectIdMaquina');
+        const txtNuevoIdMaquina = document.getElementById('txtNuevoIdMaquina');
+
+        const btnGuardarNuevaCelda = document.getElementById('btnGuardarNuevaCelda');
+
+        const selectCeldaAlta = document.getElementById('selectCeldaAlta');
+        const txtAltaNumeroSalida = document.getElementById('txtAltaNumeroSalida');
+        const btnGuardarNuevaSalida = document.getElementById('btnGuardarNuevaSalida');
+
+        // 1. Mostrar/Ocultar campos de texto libres según la opción del Select
+        function configurarToggleSelect(selectEl, inputEl) {
+            if (!selectEl || !inputEl) return;
+
+            selectEl.addEventListener('change', function () {
+                if (this.value === 'NUEVO_VALOR') {
+                    inputEl.classList.remove('d-none');
+                    inputEl.focus();
+                } else {
+                    inputEl.classList.add('d-none');
+                    inputEl.value = '';
+                }
+            });
+
+            // Formato Mayúsculas y Sanitización de espacios en el input nuevo
+            inputEl.addEventListener('input', function () {
+                let pos = this.selectionStart;
+                let limpio = this.value.replace(/^\s+/, '').replace(/\s{2,}/g, ' ').toUpperCase();
+                if (this.value !== limpio) {
+                    this.value = limpio;
+                    this.setSelectionRange(pos, pos);
+                }
+            });
+
+            inputEl.addEventListener('blur', function () {
+                this.value = this.value.trim();
+            });
+        }
+
+        configurarToggleSelect(selectPlanta, txtNuevoPlanta);
+        configurarToggleSelect(selectLinea, txtNuevoLinea);
+        configurarToggleSelect(selectCeldaNombre, txtNuevoCeldaNombre);
+        configurarToggleSelect(selectIdMaquina, txtNuevoIdMaquina);
+
+        // 2. Guardar Nueva Celda
+        btnGuardarNuevaCelda.addEventListener('click', async function () {
+            const planta = selectPlanta.value === 'NUEVO_VALOR' ? txtNuevoPlanta.value.trim().toUpperCase() : selectPlanta.value.trim().toUpperCase();
+            const linea = selectLinea.value === 'NUEVO_VALOR' ? txtNuevoLinea.value.trim().toUpperCase() : selectLinea.value.trim().toUpperCase();
+            const nombreCelda = selectCeldaNombre.value === 'NUEVO_VALOR' ? txtNuevoCeldaNombre.value.trim().toUpperCase() : selectCeldaNombre.value.trim().toUpperCase();
+            const idMaquina = selectIdMaquina.value === 'NUEVO_VALOR' ? txtNuevoIdMaquina.value.trim().toUpperCase() : selectIdMaquina.value.trim().toUpperCase();
+
+            const numSalidaInicial = parseInt(document.getElementById('txtSalidaInicialCelda').value, 10) || 1;
+
+            if (!nombreCelda || !idMaquina) {
+                mostrarToast("Por favor selecciona o escribe el Nombre de Celda e ID de Máquina.", "warning");
+                return;
+            }
+
+            btnGuardarNuevaCelda.disabled = true;
+            btnGuardarNuevaCelda.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+
+            try {
+                const response = await fetch('/Recetas/AgregarCelda', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        Planta: planta || "AUTOTEK CUAUTITLÁN",
+                        Linea: linea || "LÍNEA 1",
+                        NombreCelda: nombreCelda,
+                        IdMaquina: idMaquina,
+                        SalidaInicial: numSalidaInicial
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    mostrarToast(result.message, "success");
+                    setTimeout(() => window.location.reload(), 1200);
+                } else {
+                    mostrarToast("Error: " + result.message, "danger");
+                }
+            } catch (e) {
+                mostrarToast("Error al procesar la alta de la celda.", "danger");
+            } finally {
+                btnGuardarNuevaCelda.disabled = false;
+                btnGuardarNuevaCelda.innerHTML = '<i class="bi bi-check-circle me-1"></i>Dar de Alta Celda';
+            }
+        });
+
+        // 3. Guardar Salida
+        btnGuardarNuevaSalida.addEventListener('click', async function () {
+            const celdaNombre = selectCeldaAlta.value;
+            const numSalida = parseInt(txtAltaNumeroSalida.value, 10);
+
+            if (!celdaNombre || !numSalida || numSalida <= 0) {
+                mostrarToast("Selecciona una celda e ingresa un número de salida válido.", "warning");
+                return;
+            }
+
+            const celdaObj = celdasData.find(c => (c.Celda || c.celda) === celdaNombre);
+            const maquinas = celdaObj?.Maquinas || celdaObj?.maquinas || [];
+            const maquina = maquinas.length > 0 ? maquinas[0] : null;
+            const idMaquina = maquina?.Id || maquina?.id;
+
+            if (!idMaquina) {
+                mostrarToast("No se encontró el ID de la máquina en base de datos.", "danger");
+                return;
+            }
+
+            btnGuardarNuevaSalida.disabled = true;
+            btnGuardarNuevaSalida.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Creando...';
+
+            try {
+                const response = await fetch('/Recetas/AgregarSalida', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ IdMaquina: idMaquina, NumeroSalida: numSalida })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    mostrarToast(result.message, "success");
+                    txtAltaNumeroSalida.value = '';
+                    // Recargar tras 1.2s para actualizar celdasData en memoria
+                    setTimeout(() => window.location.reload(), 1200);
+                } else {
+                    mostrarToast("Error: " + result.message, "danger");
+                }
+            } catch (e) {
+                mostrarToast("Error de conexión al dar de alta la salida.", "danger");
+            } finally {
+                btnGuardarNuevaSalida.disabled = false;
+                btnGuardarNuevaSalida.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Dar de Alta Salida';
+            }
+        });
+
+        function mostrarToast(mensaje, tipo = "success") {
+            let container = document.getElementById('toastContainerWrapper');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainerWrapper';
+                container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                document.body.appendChild(container);
+            }
+            const toastId = 'toast_' + Date.now();
+            const bgClass = tipo === 'success' ? 'bg-success text-white' : (tipo === 'warning' ? 'bg-warning text-dark' : 'bg-danger text-white');
+            const toastHtml = `<div id="${toastId}" class="toast align-items-center ${bgClass} border-0 shadow" role="alert"><div class="d-flex"><div class="toast-body">${mensaje}</div><button type="button" class="btn-close ${tipo === 'warning' ? '' : 'btn-close-white'} me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            new bootstrap.Toast(document.getElementById(toastId), { delay: 3500 }).show();
+        }
+    </script>
+}

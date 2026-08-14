@@ -46,6 +46,7 @@ namespace Enhartt.Domain.Repositories
             string? salida,
             DateTime? fechaInicio,
             DateTime? fechaFin);
+        Task ActualizarRecetaConHistorialAsync(Receta nuevaReceta, string usuario);
     }
 
 }

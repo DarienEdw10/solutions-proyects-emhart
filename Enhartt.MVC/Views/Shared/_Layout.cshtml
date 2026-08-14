@@ -28,26 +28,50 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse mt-2 mt-lg-0" id="navbarContent">
-                <div class="ms-auto d-flex align-items-center gap-2">
+                <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+                    
+                    <!-- Indicador de Usuario Autenticado / Sesión Windows -->
+                    @if (User?.Identity?.IsAuthenticated == true)
+                    {
+                        <span class="badge bg-light text-dark border py-2 px-3 d-flex align-items-center" title="Usuario Autenticado por Windows">
+                            <i class="bi bi-person-circle text-primary me-1 fs-6"></i>
+                            <span class="font-monospace fw-bold">@User.Identity.Name</span>
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary py-2 px-3">
+                            <i class="bi bi-person-fill me-1"></i>Invitado
+                        </span>
+                    }
+
                     <span class="badge bg-success py-2 px-3">
                         <i class="bi bi-wifi me-1"></i>ONLINE
                     </span>
 
-                    <!-- Botón para ir al Dashboard Principal -->
-                    <a asp-controller="Home" asp-action="Index" class="btn btn-outline-light btn-sm">
+                    <!-- Botón Dashboard Principal -->
+                    <a asp-controller="Home" asp-action="Index" 
+                       class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")">
                         <i class="bi bi-speedometer2 me-1"></i>Principal
                     </a>
 
-                    <!-- Botón para ir a Gestión de Recetas -->
-                    <a asp-controller="Recetas" asp-action="Index" class="btn btn-outline-light btn-sm">
+                    <!-- Botón Gestión de Recetas -->
+                    <a asp-controller="Recetas" asp-action="Index" 
+                       class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Recetas" ? "active" : "")">
                         <i class="bi bi-sliders me-1"></i>Recetas
+                    </a>
+
+                    <!-- Botón Altas de Celdas y Salidas -->
+                    <a asp-controller="Recetas" asp-action="AltasRecetas" 
+                       class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "AltasRecetas" ? "active" : "")">
+                        <i class="bi bi-plus-square-fill me-1"></i>Altas Recetas
                     </a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- Contenido Principal de las Vistas -->
+    <!-- Contenido Principal -->
     <div class="container-fluid py-3 py-md-4 px-2 px-md-4">
         @RenderBody()
     </div>

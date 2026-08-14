@@ -19,16 +19,22 @@ public class RecetasController : Controller
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        return await CargarVistaRecetasAsync();
+        return await CargarVistaRecetasAsync("recetas");
     }
 
     [HttpGet]
     public async Task<IActionResult> Recetas()
     {
-        return await CargarVistaRecetasAsync();
+        return await CargarVistaRecetasAsync("recetas");
     }
 
-    private async Task<IActionResult> CargarVistaRecetasAsync()
+    [HttpGet]
+    public async Task<IActionResult> AltasRecetas()
+    {
+        return await CargarVistaRecetasAsync("AltasRecetas");
+    }
+
+    private async Task<IActionResult> CargarVistaRecetasAsync(string vistaNombre)
     {
         var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
 
@@ -48,7 +54,6 @@ public class RecetasController : Controller
 
             foreach (var maquina in celdaKVP.Value)
             {
-                // Obtenemos los registros COMPLETOS de la tabla de recetas
                 var recetasDb = await repository.ObtenerRecetasPorMaquinaAsync(maquina.Id) ?? [];
 
                 maquinasVM.Add(new MaquinaViewModel
@@ -76,10 +81,7 @@ public class RecetasController : Controller
             });
         }
 
-        return View("recetas", new RecetasViewModel()
-        {
-            Celdas = celdasVM
-        });
+        return View(vistaNombre, new RecetasViewModel() { Celdas = celdasVM });
     }
 
     [HttpPost]
@@ -93,23 +95,24 @@ public class RecetasController : Controller
         try
         {
             string usuario = User?.Identity?.Name ?? "Usuario_Web";
-
-            // Convertir el string de salida a int si tu entidad Receta maneja Salida como int
             int.TryParse(dto.Salida, out int numSalida);
 
             foreach (var p in dto.Parametros)
             {
-                var recetaAActualizar = new Enhartt.Domain.Models.Receta
+                var nuevaReceta = new Enhartt.Domain.Models.Receta
                 {
                     IdMaquina = dto.IdMaquina,
                     Salida = numSalida,
-                    Parametro = p.Parametro,
+                    Parametro = p.Parametro?.Trim() ?? "",
                     MinVal = p.MinVal,
-                    MaxVal = p.MaxVal
+                    MaxVal = p.MaxVal,
+                    Estado = true,
+                    FechaCreacion = DateTime.Now,
+                    ModificadoPor = usuario
                 };
 
-                // Llamada al método real de tu IRepository
-                await repository.ActualizarRecetaAsync(recetaAActualizar, usuario);
+                // Desactiva la versión anterior e inserta la nueva como ACTIVA
+                await repository.ActualizarRecetaConHistorialAsync(nuevaReceta, usuario);
             }
 
             return Json(new { success = true, message = "Los límites de calidad fueron guardados correctamente." });
@@ -119,6 +122,7 @@ public class RecetasController : Controller
             return StatusCode(500, new { success = false, message = $"Error en el servidor: {ex.Message}" });
         }
     }
+
     [HttpGet]
     public async Task<IActionResult> ObtenerAuditoria(int? idMaquina, string? salida, DateTime? fechaInicio, DateTime? fechaFin)
     {
@@ -130,7 +134,7 @@ public class RecetasController : Controller
             var resultadoDto = historial.Select(h => new
             {
                 Fecha = (h.FechaModificacion ?? h.FechaCreacion).ToString("yyyy-MM-dd HH:mm:ss"),
-                Celda = maquinas.FirstOrDefault(m => m.Id == h.IdMaquina)?.Celda ?? "CEN-01", // <-- Agregado
+                Celda = maquinas.FirstOrDefault(m => m.Id == h.IdMaquina)?.Celda ?? "CEN-01",
                 Salida = h.Salida,
                 Parametro = h.Parametro ?? "Límite Control",
                 MinVal = h.MinVal,
@@ -146,11 +150,6 @@ public class RecetasController : Controller
             return StatusCode(500, new { success = false, message = $"Error al obtener auditoría: {ex.Message}" });
         }
     }
-    public class AgregarSalidaDto
-    {
-        public int IdMaquina { get; set; }
-        public int NumeroSalida { get; set; }
-    }
 
     [HttpPost]
     public async Task<IActionResult> AgregarSalida([FromBody] AgregarSalidaDto dto)
@@ -163,19 +162,25 @@ public class RecetasController : Controller
         try
         {
             string usuario = User?.Identity?.Name ?? "Usuario_Web";
+            var recetasExistentes = await repository.ObtenerRecetasPorMaquinaAsync(dto.IdMaquina) ?? [];
 
-            // Definición de parámetros físicos estándar para la nueva salida
             string[] parametrosBase = new string[] { "VolArc", "VolPri", "Corriente", "Tiempo", "Penetracion", "Energia" };
 
             foreach (var param in parametrosBase)
             {
+                var recetaReferencia = recetasExistentes.FirstOrDefault(r =>
+                    r.Parametro != null && r.Parametro.Equals(param, StringComparison.OrdinalIgnoreCase));
+
+                double minVal = recetaReferencia?.MinVal ?? 0;
+                double maxVal = recetaReferencia?.MaxVal ?? 0;
+
                 var nuevaReceta = new Enhartt.Domain.Models.Receta
                 {
                     IdMaquina = dto.IdMaquina,
                     Salida = dto.NumeroSalida,
                     Parametro = param,
-                    MinVal = 0,
-                    MaxVal = 0,
+                    MinVal = minVal,
+                    MaxVal = maxVal,
                     Estado = true,
                     FechaCreacion = DateTime.Now,
                     ModificadoPor = usuario
@@ -184,7 +189,7 @@ public class RecetasController : Controller
                 await repository.AgregarRecetaAsync(nuevaReceta, usuario);
             }
 
-            return Json(new { success = true, message = $"Salida {dto.NumeroSalida} agregada correctamente." });
+            return Json(new { success = true, message = $"Salida {dto.NumeroSalida} agregada e inicializada correctamente." });
         }
         catch (Exception ex)
         {
@@ -192,17 +197,89 @@ public class RecetasController : Controller
         }
     }
 
-    public class GuardarRecetaDto
+    [HttpPost]
+    public async Task<IActionResult> AgregarCelda([FromBody] AgregarCeldaDto dto)
     {
-        public int IdMaquina { get; set; }
-        public string Salida { get; set; } = string.Empty;
-        public List<ParametroLimiteDto> Parametros { get; set; } = [];
-    }
+        if (dto == null || string.IsNullOrWhiteSpace(dto.NombreCelda) || string.IsNullOrWhiteSpace(dto.IdMaquina))
+        {
+            return BadRequest(new { success = false, message = "El nombre de la celda y el ID de máquina son obligatorios." });
+        }
 
-    public class ParametroLimiteDto
-    {
-        public string Parametro { get; set; } = string.Empty;
-        public double MinVal { get; set; }
-        public double MaxVal { get; set; }
+        try
+        {
+            string usuario = User?.Identity?.Name ?? "Usuario_Web";
+            int salidaInicial = dto.SalidaInicial > 0 ? dto.SalidaInicial : 1;
+
+            var nuevaMaquina = new Enhartt.Domain.Models.Maquina
+            {
+                Planta = string.IsNullOrWhiteSpace(dto.Planta) ? "AUTOTEK CUAUTITLÁN" : dto.Planta.Trim().ToUpper(),
+                Linea = string.IsNullOrWhiteSpace(dto.Linea) ? "LÍNEA 1" : dto.Linea.Trim().ToUpper(),
+                Celda = dto.NombreCelda.Trim().ToUpper(),
+                Estacion = "ESTACIÓN 1",
+                IdMaquina = dto.IdMaquina.Trim().ToUpper(),
+                FechaCreacion = DateTime.Now
+            };
+
+            var maquinaCreada = await repository.AgregarMaquinaAsync(nuevaMaquina);
+
+            if (maquinaCreada == null)
+            {
+                return StatusCode(500, new { success = false, message = "No se pudo registrar la máquina en la base de datos." });
+            }
+
+            string[] parametrosBase = new string[] { "VolArc", "VolPri", "Corriente", "Tiempo", "Penetracion", "Energia" };
+
+            foreach (var param in parametrosBase)
+            {
+                var recetaInicial = new Enhartt.Domain.Models.Receta
+                {
+                    IdMaquina = maquinaCreada.Id,
+                    Salida = salidaInicial,
+                    Parametro = param,
+                    MinVal = 0,
+                    MaxVal = 0,
+                    Estado = true,
+                    FechaCreacion = DateTime.Now,
+                    ModificadoPor = usuario
+                };
+
+                await repository.AgregarRecetaAsync(recetaInicial, usuario);
+            }
+
+            return Json(new { success = true, message = $"Celda '{nuevaMaquina.Celda}' creada exitosamente inicializada en la Salida {salidaInicial}." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = $"Error al crear celda: {ex.Message}" });
+        }
     }
+}
+
+public class AgregarCeldaDto
+{
+    public string Planta { get; set; } = string.Empty;
+    public string Linea { get; set; } = string.Empty;
+    public string NombreCelda { get; set; } = string.Empty;
+    public string IdMaquina { get; set; } = string.Empty;
+    public int SalidaInicial { get; set; } = 1;
+}
+
+public class GuardarRecetaDto
+{
+    public int IdMaquina { get; set; }
+    public string Salida { get; set; } = string.Empty;
+    public List<ParametroLimiteDto> Parametros { get; set; } = [];
+}
+
+public class ParametroLimiteDto
+{
+    public string Parametro { get; set; } = string.Empty;
+    public double MinVal { get; set; }
+    public double MaxVal { get; set; }
+}
+
+public class AgregarSalidaDto
+{
+    public int IdMaquina { get; set; }
+    public int NumeroSalida { get; set; }
 }
