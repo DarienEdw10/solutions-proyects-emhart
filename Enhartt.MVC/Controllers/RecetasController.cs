@@ -99,6 +99,10 @@ public class RecetasController : Controller
             string usuario = User?.Identity?.Name ?? "Usuario_Web";
             int.TryParse(dto.Salida, out int numSalida);
 
+            string motivo = string.IsNullOrWhiteSpace(dto.Comentario)
+                ? "Ajuste operativo de parámetros"
+                : dto.Comentario.Trim();
+
             foreach (var p in dto.Parametros)
             {
                 var nuevaReceta = new Enhartt.Domain.Models.Receta
@@ -110,14 +114,15 @@ public class RecetasController : Controller
                     MaxVal = p.MaxVal,
                     Estado = true,
                     FechaCreacion = DateTime.Now,
-                    ModificadoPor = usuario
+                    ModificadoPor = usuario,
+                    Comentario = motivo // <-- Asignación del comentario en bitácora
                 };
 
                 // Desactiva la versión anterior e inserta la nueva como ACTIVA
                 await repository.ActualizarRecetaConHistorialAsync(nuevaReceta, usuario);
             }
 
-            return Json(new { success = true, message = "Los límites de calidad fueron guardados correctamente." });
+            return Json(new { success = true, message = "Los límites y el motivo de cambio fueron registrados exitosamente." });
         }
         catch (Exception ex)
         {
@@ -142,7 +147,8 @@ public class RecetasController : Controller
                 MinVal = h.MinVal,
                 MaxVal = h.MaxVal,
                 Estado = h.Estado ? "ACTIVO" : "INACTIVO",
-                Usuario = string.IsNullOrEmpty(h.ModificadoPor) ? "SISTEMA_INICIAL" : h.ModificadoPor
+                Usuario = string.IsNullOrEmpty(h.ModificadoPor) ? "SISTEMA_INICIAL" : h.ModificadoPor,
+                Comentario = string.IsNullOrWhiteSpace(h.Comentario) ? "-" : h.Comentario // <-- Retorno a la tabla
             });
 
             return Json(new { success = true, data = resultadoDto });
@@ -185,7 +191,8 @@ public class RecetasController : Controller
                     MaxVal = maxVal,
                     Estado = true,
                     FechaCreacion = DateTime.Now,
-                    ModificadoPor = usuario
+                    ModificadoPor = usuario,
+                    Comentario = "Alta de nueva salida"
                 };
 
                 await repository.AgregarRecetaAsync(nuevaReceta, usuario);
@@ -242,7 +249,8 @@ public class RecetasController : Controller
                     MaxVal = 0,
                     Estado = true,
                     FechaCreacion = DateTime.Now,
-                    ModificadoPor = usuario
+                    ModificadoPor = usuario,
+                    Comentario = "Alta de celda inicial"
                 };
 
                 await repository.AgregarRecetaAsync(recetaInicial, usuario);
@@ -270,6 +278,7 @@ public class GuardarRecetaDto
 {
     public int IdMaquina { get; set; }
     public string Salida { get; set; } = string.Empty;
+    public string? Comentario { get; set; } // <-- Captura el motivo/bitácora
     public List<ParametroLimiteDto> Parametros { get; set; } = [];
 }
 

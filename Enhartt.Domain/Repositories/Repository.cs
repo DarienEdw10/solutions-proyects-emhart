@@ -24,7 +24,7 @@ namespace Enhartt.Domain.Repositories
                                  .ToListAsync();
         }
 
-        // Lógica de historial: Desactiva recetas anteriores y crea el nuevo registro activo
+        // Lógica de historial: Desactiva recetas anteriores y crea el nuevo registro activo con comentario de bitácora
         public async Task ActualizarRecetaConHistorialAsync(Receta nuevaReceta, string usuario)
         {
             string paramLimpio = nuevaReceta.Parametro?.Trim() ?? "";
@@ -49,6 +49,9 @@ namespace Enhartt.Domain.Repositories
             nuevaReceta.Estado = true;
             nuevaReceta.FechaCreacion = DateTime.Now;
             nuevaReceta.ModificadoPor = usuario;
+            nuevaReceta.Comentario = string.IsNullOrWhiteSpace(nuevaReceta.Comentario) 
+                ? "Ajuste operativo de parámetros" 
+                : nuevaReceta.Comentario.Trim();
 
             await _context.Receta.AddAsync(nuevaReceta);
             await _context.SaveChangesAsync();
@@ -77,6 +80,7 @@ namespace Enhartt.Domain.Repositories
             recetaBd.MaxVal = receta.MaxVal;
             recetaBd.Estado = receta.Estado;
             recetaBd.ModificadoPor = usuario;
+            recetaBd.Comentario = receta.Comentario;
             recetaBd.FechaModificacion = DateTime.Now;
 
             _context.Receta.Update(recetaBd);
@@ -89,6 +93,10 @@ namespace Enhartt.Domain.Repositories
             receta.Estado = true;
             receta.FechaCreacion = DateTime.Now;
             receta.ModificadoPor = usuario;
+            receta.Comentario = string.IsNullOrWhiteSpace(receta.Comentario) 
+                ? "Alta inicial de parámetro" 
+                : receta.Comentario.Trim();
+
             var entityEntry = await _context.Receta.AddAsync(receta);
             await _context.SaveChangesAsync();
             return entityEntry.Entity;

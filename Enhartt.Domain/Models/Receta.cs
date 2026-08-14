@@ -36,5 +36,7 @@ namespace Enhartt.Domain.Models
 
         [Column("estado")]
         public bool Estado { get; set; } = true;
+        // Campo nuevo para bitácora
+        public string? Comentario { get; set; }
     }
 }

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Enhartt.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c0ce49cc84956872057ddae6fb322fa4650cf2e2")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+77f1fce11783737e52d7b216fa60ea393a284c29")]
 [assembly: System.Reflection.AssemblyProductAttribute("Enhartt.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Enhartt.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
