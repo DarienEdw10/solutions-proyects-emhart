@@ -1,10 +1,12 @@
 using Enhartt.MVC.Models.ViewModels;
 using Enhartt.MVC.Services;
 using Enhartt.Domain.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Enhartt.MVC.Controllers;
 
+[Authorize]
 public class RecetasController : Controller
 {
     private readonly EnharttService enharttService;

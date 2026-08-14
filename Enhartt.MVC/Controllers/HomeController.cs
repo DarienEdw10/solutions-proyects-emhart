@@ -1,9 +1,11 @@
 using Enhartt.Domain.Repositories;
 using Enhartt.MVC.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Enhartt.MVC.Controllers;
 
+[AllowAnonymous]
 public class HomeController : Controller
 {
     private readonly EnharttService enharttService;
