@@ -23,14 +23,22 @@ public class HomeController : Controller
     [HttpGet]
     public async Task<IActionResult> ObtenerCeldas()
     {
-        var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
-        var celdas = maquinas
-            .Where(m => !string.IsNullOrEmpty(m.Celda))
-            .Select(m => new { id = m.Id, celda = m.Celda, idMaquina = m.IdMaquina })
-            .ToList();
+        try
+        {
+            var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
+            var celdas = maquinas
+                .Where(m => !string.IsNullOrEmpty(m.Celda))
+                .Select(m => new { id = m.Id, celda = m.Celda, idMaquina = m.IdMaquina })
+                .ToList();
 
-        return Json(celdas);
+            return Json(celdas);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = ex.Message });
+        }
     }
+
     [HttpGet]
     public async Task<IActionResult> ExportarExcel(
         int? identificadorId,
@@ -41,11 +49,14 @@ public class HomeController : Controller
     {
         try
         {
-            // Traer TODOS los registros aplicando los filtros activos
+            string? estatusLimpio = NormalizarEstatus(estatus);
+
+            // Traer todos los registros aplicando los filtros activos
             var registros = await repository.ObtenerParametrosPaginadosAsync(
-                identificadorId, estatus, fechaInicio, fechaFin, busqueda, pagina: 1, registrosPorPagina: int.MaxValue);
+                identificadorId, estatusLimpio, fechaInicio, fechaFin, busqueda, pagina: 1, registrosPorPagina: int.MaxValue);
 
             var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
+            var dictMaquinas = maquinas.ToDictionary(m => m.Id, m => m.Celda ?? "CEN-01");
 
             var builder = new System.Text.StringBuilder();
             // Encabezado CSV con compatibilidad UTF-8
@@ -53,10 +64,10 @@ public class HomeController : Controller
 
             foreach (var p in registros)
             {
-                var celda = maquinas.FirstOrDefault(m => m.Id == p.IdentificadorId)?.Celda ?? "CEN-01";
-                var fecha = p.Fecha.HasValue ? p.Fecha.Value.ToString("yyyy-MM-dd HH:mm:ss") : "-";
-                var estatusCalidad = string.IsNullOrEmpty(p.EstatusCalidad) ? "OK" : p.EstatusCalidad;
-                var detalles = string.IsNullOrEmpty(p.DetallesFallas) ? "-" : p.DetallesFallas.Replace("\"", "\"\"");
+                string celda = p.IdentificadorId.HasValue && dictMaquinas.TryGetValue(p.IdentificadorId.Value, out var c) ? c : "CEN-01";
+                string fecha = p.Fecha.HasValue ? p.Fecha.Value.ToString("yyyy-MM-dd HH:mm:ss") : "-";
+                string estatusCalidad = string.IsNullOrEmpty(p.EstatusCalidad) ? "OK" : p.EstatusCalidad;
+                string detalles = string.IsNullOrEmpty(p.DetallesFallas) ? "-" : p.DetallesFallas.Replace("\"", "\"\"");
 
                 builder.AppendLine($"\"{fecha}\",\"{celda}\",\"Salida {p.Salida ?? 1}\",\"Turno 1\",\"#{p.NumSol ?? p.IdRegistro}\",\"{p.Corriente ?? 0}\",\"{p.Energia ?? 0}\",\"{p.Tiempo ?? 0}\",\"{p.Penetracion ?? 0}\",\"{estatusCalidad}\",\"{detalles}\"");
             }
@@ -80,14 +91,17 @@ public class HomeController : Controller
     {
         try
         {
+            string? estatusLimpio = NormalizarEstatus(estatus);
+
             var registros = await repository.ObtenerParametrosPaginadosAsync(
-                identificadorId, estatus, fechaInicio, fechaFin, busqueda, pagina: 1, registrosPorPagina: int.MaxValue);
+                identificadorId, estatusLimpio, fechaInicio, fechaFin, busqueda, pagina: 1, registrosPorPagina: int.MaxValue);
 
             var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
+            var dictMaquinas = maquinas.ToDictionary(m => m.Id, m => m.Celda ?? "CEN-01");
 
             var dataFormateada = registros.Select(p => new
             {
-                Celda = maquinas.FirstOrDefault(m => m.Id == p.IdentificadorId)?.Celda ?? "CEN-01",
+                Celda = p.IdentificadorId.HasValue && dictMaquinas.TryGetValue(p.IdentificadorId.Value, out var c) ? c : "CEN-01",
                 Salida = p.Salida ?? 1,
                 Turno = 1,
                 NumSol = p.NumSol ?? p.IdRegistro,
@@ -110,29 +124,23 @@ public class HomeController : Controller
 
     [HttpGet]
     public async Task<IActionResult> ObtenerParametros(
-    int? identificadorId,
-    string? estatus,
-    DateTime? fechaInicio,
-    DateTime? fechaFin,
-    string? busqueda,
-    int pagina = 1,
-    int registrosPorPagina = 5)
+        int? identificadorId,
+        string? estatus,
+        DateTime? fechaInicio,
+        DateTime? fechaFin,
+        string? busqueda,
+        int pagina = 1,
+        int registrosPorPagina = 5)
     {
         try
         {
-            // Limpiar estatus ("OK" o "NOK")
-            string? estatusLimpio = null;
-            if (!string.IsNullOrEmpty(estatus))
-            {
-                if (estatus.Contains("OK") && !estatus.Contains("NOK")) estatusLimpio = "OK";
-                else if (estatus.Contains("NOK")) estatusLimpio = "NOK";
-            }
+            string? estatusLimpio = NormalizarEstatus(estatus);
 
-            // 1. Obtener la página actual de 5 registros aplicando TODOS los filtros
+            // 1. Obtener la página actual de registros aplicando TODOS los filtros
             var registros = await repository.ObtenerParametrosPaginadosAsync(
                 identificadorId, estatusLimpio, fechaInicio, fechaFin, busqueda, pagina, registrosPorPagina);
 
-            // 2. Obtener los totales reales de la celda/fechas seleccionadas (sin filtrar por OK/NOK para sacar el total exacto)
+            // 2. Totales reales de la celda/fechas (sin filtrar por OK/NOK para calcular KPIs globales)
             int totalDisparos = await repository.ContarParametrosTotalAsync(
                 identificadorId, null, fechaInicio, fechaFin, busqueda);
 
@@ -142,7 +150,6 @@ public class HomeController : Controller
             int nokCount = await repository.ContarParametrosTotalAsync(
                 identificadorId, "NOK", fechaInicio, fechaFin, busqueda);
 
-            // Si se filtró explícitamente por "Solo OK" o "Solo NOK", ajustar el contador total para la tabla
             int totalFiltradoTabla = string.IsNullOrEmpty(estatusLimpio)
                 ? totalDisparos
                 : (estatusLimpio == "OK" ? okCount : nokCount);
@@ -152,12 +159,13 @@ public class HomeController : Controller
                 : 0;
 
             var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
+            var dictMaquinas = maquinas.ToDictionary(m => m.Id, m => m.Celda ?? "CEN-01");
 
             var dataFormateada = registros.Select(p => new
             {
                 p.IdRegistro,
                 p.IdentificadorId,
-                Celda = maquinas.FirstOrDefault(m => m.Id == p.IdentificadorId)?.Celda ?? "CEN-01",
+                Celda = p.IdentificadorId.HasValue && dictMaquinas.TryGetValue(p.IdentificadorId.Value, out var c) ? c : "CEN-01",
                 Salida = p.Salida ?? 1,
                 Turno = 1,
                 p.NumSol,
@@ -175,7 +183,7 @@ public class HomeController : Controller
                 EstatusCalidad = string.IsNullOrEmpty(p.EstatusCalidad) ? "OK" : p.EstatusCalidad,
                 DetallesFallas = string.IsNullOrEmpty(p.DetallesFallas) ? "-" : p.DetallesFallas,
 
-                // Construcción de Serial de Trazabilidad dinámico:
+                // Serial de Trazabilidad dinámico
                 SerialTrazabilidad = $"TCK-M{p.IdentificadorId ?? 0}-S{p.Salida ?? 1}-#{p.NumSol ?? p.IdRegistro}",
 
                 FechaFormatted = p.Fecha.HasValue ? p.Fecha.Value.ToString("yyyy-MM-dd HH:mm:ss") : DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
@@ -201,5 +209,13 @@ public class HomeController : Controller
         {
             return StatusCode(500, new { success = false, message = ex.Message });
         }
+    }
+
+    private static string? NormalizarEstatus(string? estatus)
+    {
+        if (string.IsNullOrWhiteSpace(estatus)) return null;
+        if (estatus.Contains("OK") && !estatus.Contains("NOK")) return "OK";
+        if (estatus.Contains("NOK")) return "NOK";
+        return estatus.Trim();
     }
 }

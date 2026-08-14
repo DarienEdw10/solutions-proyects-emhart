@@ -133,7 +133,7 @@
             <div class="modal-body py-4">
                 <p class="mb-2 text-dark fs-6 fw-semibold">¿Estás seguro de que deseas guardar los nuevos límites de calidad?</p>
                 <div class="alert alert-warning mb-0 py-2 small border-start border-4 border-warning">
-                    <i class="bi bi-info-circle-fill me-1"></i> Esta acción actualizará los rangos en la base de datos y quedará registrada en la auditoría.
+                    <i class="bi bi-info-circle-fill me-1"></i> Esta acción creará una nueva versión activa en la base de datos y desactivará la anterior para mantener la auditoría.
                 </div>
             </div>
             <div class="modal-footer bg-light py-2">
@@ -216,6 +216,7 @@
         const inputFechaInicio = document.getElementById('fechaInicio');
         const inputFechaFin = document.getElementById('fechaFin');
 
+        // 1. Selector de Celda -> Carga Salidas
         selectCelda.addEventListener('change', function () {
             const celdaNombre = this.value;
             selectSalida.innerHTML = '<option value="">-- Seleccione una Salida / Pistola --</option>';
@@ -250,6 +251,7 @@
             }
         });
 
+        // 2. Selector de Salida -> Carga Parámetros
         selectSalida.addEventListener('change', function () {
             const idMaquina = parseInt(this.value, 10);
             const numSalida = this.options[this.selectedIndex]?.dataset.salida;
@@ -265,12 +267,12 @@
             const maquinaObj = maquinas.find(m => (m.Id || m.id) === idMaquina);
             const recetas = maquinaObj?.Recetas || maquinaObj?.recetas || [];
 
+            // Filtrar únicamente los parámetros activos de esa salida
             const parametrosEncontrados = recetas.filter(r =>
                 String(r.Salida || r.salida) === String(numSalida) &&
                 (r.Estado ?? r.estado ?? true)
             );
 
-            // Actualizar la fecha de última modificación dinámicamente
             if (parametrosEncontrados.length > 0) {
                 const fechaRef = parametrosEncontrados[0].FechaModificacion || 
                                  parametrosEncontrados[0].fechaModificacion || 
@@ -293,6 +295,7 @@
             modalConfirmar.show();
         });
 
+        // 3. Confirmación de Guardado
         btnConfirmarGuardarFinal.addEventListener('click', async function () {
             const idMaquina = parseInt(selectSalida.value, 10);
             const numSalida = selectSalida.options[selectSalida.selectedIndex]?.dataset.salida;
@@ -326,7 +329,8 @@
                 const result = await response.json();
                 if (result.success) {
                     mostrarNotificacion(result.message, "success");
-                    if (lblUltimaMod) lblUltimaMod.innerText = new Date().toLocaleTimeString();
+                    // Recargar la página tras 1 segundo para leer los datos actualizados de BD
+                    setTimeout(() => window.location.reload(), 1000);
                 } else {
                     mostrarNotificacion("Error: " + result.message, "danger");
                 }
@@ -337,33 +341,48 @@
             }
         });
 
-        btnConsultarAuditoria.addEventListener('click', async function () {
-            const fechaInicio = inputFechaInicio.value;
-            const fechaFin = inputFechaFin.value;
+        // 4. Auditoría (Funciona con rango de fechas y filtro opcional por celda/salida)
+        if (btnConsultarAuditoria) {
+            btnConsultarAuditoria.addEventListener('click', async function () {
+                const fechaInicio = inputFechaInicio.value;
+                const fechaFin = inputFechaFin.value;
 
-            if (!fechaInicio || !fechaFin) {
-                mostrarNotificacion("Selecciona rango de fechas.", "warning");
-                return;
-            }
+                if (!fechaInicio || !fechaFin) {
+                    mostrarNotificacion("Selecciona un rango de fechas.", "warning");
+                    return;
+                }
 
-            const idMaquina = selectSalida.value ? parseInt(selectSalida.value, 10) : '';
-            const numSalida = selectSalida.options[selectSalida.selectedIndex]?.dataset.salida || '';
+                const idMaquina = selectSalida && selectSalida.value ? selectSalida.value : '';
+                const numSalida = selectSalida && selectSalida.options[selectSalida.selectedIndex]?.dataset.salida 
+                    ? selectSalida.options[selectSalida.selectedIndex].dataset.salida 
+                    : '';
 
-            try {
-                const url = `/Recetas/ObtenerAuditoria?idMaquina=${idMaquina}&salida=${numSalida}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
-                const response = await fetch(url);
-                const result = await response.json();
+                btnConsultarAuditoria.disabled = true;
+                btnConsultarAuditoria.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Consultando...';
 
-                if (result.success) renderizarTablaAuditoria(result.data);
-            } catch (e) {
-                mostrarNotificacion("Error al consultar auditoría.", "danger");
-            }
-        });
+                try {
+                    const url = `/Recetas/ObtenerAuditoria?idMaquina=${idMaquina}&salida=${numSalida}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+                    const response = await fetch(url);
+                    const result = await response.json();
+
+                    if (result.success) {
+                        renderizarTablaAuditoria(result.data);
+                    } else {
+                        mostrarNotificacion("Error al obtener auditoría: " + result.message, "danger");
+                    }
+                } catch (e) {
+                    mostrarNotificacion("Error al consultar auditoría.", "danger");
+                } finally {
+                    btnConsultarAuditoria.disabled = false;
+                    btnConsultarAuditoria.innerHTML = '<i class="bi bi-search me-1"></i>Consultar Auditoría';
+                }
+            });
+        }
 
         function renderizarTablaAuditoria(datos) {
             historialAuditoriaCache = datos || [];
             if (!datos || datos.length === 0) {
-                tblAuditoriaBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">No hay auditoría.</td></tr>`;
+                tblAuditoriaBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">No hay auditoría para el rango de fechas seleccionado.</td></tr>`;
                 return;
             }
             tblAuditoriaBody.innerHTML = '';

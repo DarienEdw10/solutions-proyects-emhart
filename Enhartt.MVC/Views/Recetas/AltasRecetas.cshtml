@@ -60,8 +60,7 @@
                                 <option value="@c.Celda">@c.Celda</option>
                             }
                         }
-                        <option value="NUEVO_VALOR" class="fw-bold text-primary">+ REGISTRAR NUEVA CELDA / PROYECTO...
-                        </option>
+                        <option value="NUEVO_VALOR" class="fw-bold text-primary">+ REGISTRAR NUEVA CELDA / PROYECTO...</option>
                     </select>
                     <input type="text" id="txtNuevoCeldaNombre" class="form-control d-none fw-bold"
                            style="text-transform: uppercase;" placeholder="ESCRIBE EL NOMBRE DE LA NUEVA CELDA">
@@ -81,8 +80,7 @@
                                 <option value="@id">@id</option>
                             }
                         }
-                        <option value="NUEVO_VALOR" class="fw-bold text-primary">+ REGISTRAR NUEVO ID MÁQUINA...
-                        </option>
+                        <option value="NUEVO_VALOR" class="fw-bold text-primary">+ REGISTRAR NUEVO ID MÁQUINA...</option>
                     </select>
                     <input type="text" id="txtNuevoIdMaquina" class="form-control d-none fw-bold"
                            style="text-transform: uppercase;" placeholder="ESCRIBE EL NUEVO ID DE MÁQUINA (EJ. CELDA-04)">
@@ -97,7 +95,7 @@
 
                 <div class="alert alert-info py-2 small mb-0 border-start border-4 border-info">
                     <i class="bi bi-info-circle-fill me-1"></i> Se creará el registro en la tabla <code>maquinas</code>
-                    y se inicializará con la <b>Salida</b> configurada arriba en <code>recetas</code>.
+                    y se inicializarán los 6 parámetros en la <b>Salida</b> configurada arriba dentro de <code>recetas</code>.
                 </div>
             </div>
             <div class="card-footer bg-white border-0 text-end p-3">
@@ -132,13 +130,11 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold small">Número de Salida / Pistola a Agregar</label>
-                    <input type="number" id="txtAltaNumeroSalida" class="form-control" placeholder="Ej. 2" min="1"
-                           max="99">
+                    <input type="number" id="txtAltaNumeroSalida" class="form-control" placeholder="Ej. 2" min="1" max="99">
                 </div>
                 <div class="alert alert-warning py-2 small mb-0 border-start border-4 border-warning">
                     <i class="bi bi-lightning-fill me-1"></i> Se agregarán los 6 parámetros físicos en la tabla
-                    <code>recetas</code> (VolArc, VolPri, Corriente, Tiempo, Penetracion, Energia) heredando los valores
-                    base de la celda.
+                    <code>recetas</code> (VolArc, VolPri, Corriente, Tiempo, Penetracion, Energia) heredando los valores base de la celda.
                 </div>
             </div>
             <div class="card-footer bg-white border-0 text-end p-3">
@@ -263,7 +259,8 @@
             }
 
             const celdaObj = celdasData.find(c => (c.Celda || c.celda) === celdaNombre);
-            const maquina = celdaObj?.Maquinas?.[0] || celdaObj?.maquinas?.[0];
+            const maquinas = celdaObj?.Maquinas || celdaObj?.maquinas || [];
+            const maquina = maquinas.length > 0 ? maquinas[0] : null;
             const idMaquina = maquina?.Id || maquina?.id;
 
             if (!idMaquina) {
@@ -285,6 +282,8 @@
                 if (result.success) {
                     mostrarToast(result.message, "success");
                     txtAltaNumeroSalida.value = '';
+                    // Recargar tras 1.2s para actualizar celdasData en memoria
+                    setTimeout(() => window.location.reload(), 1200);
                 } else {
                     mostrarToast("Error: " + result.message, "danger");
                 }

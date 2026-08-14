@@ -34,11 +34,11 @@ async function cargarCeldas() {
             select.appendChild(option);
         });
     } catch (e) {
-        select.innerHTML = '<option value="">-- Error al cargar --</option>';
+        select.innerHTML = '<option value="">-- Error al cargar celdas --</option>';
     }
 }
 
-// Actualizar el texto y estado de la ÚNICA tarjeta dinámica según la Celda Filtrada
+// Actualizar el texto y estado de la tarjeta dinámica según la Celda Filtrada
 function actualizarTarjetaCeldaFiltrada() {
     const selectCelda = document.getElementById('filtro-celda');
     const lblNombre = document.getElementById('lbl-celda-activa-nombre');
@@ -83,7 +83,7 @@ async function cargarDatos(pagina = 1) {
             // 1. Renderizar KPIs
             renderizarKPIs(result.kpis);
 
-            // 2. Renderizar Tabla y Paginación (Se ejecutan con prioridad)
+            // 2. Renderizar Tabla y Paginación
             renderizarTabla(datosCache);
             
             const totalReg = result.total ?? result.Total ?? datosCache.length;
@@ -100,7 +100,7 @@ async function cargarDatos(pagina = 1) {
             }
         }
     } catch (error) {
-        console.error("Error al cargar datos:", error);
+        console.error("Error al cargar datos de telemetría:", error);
     }
 }
 
@@ -114,14 +114,22 @@ function renderizarKPIs(kpis) {
     const elTotal = document.getElementById('lbl-total-disparos');
     const elOk = document.getElementById('lbl-calidad-ok');
     const elNok = document.getElementById('lbl-desviaciones-nok');
-    const elFtt = document.getElementById('lbl-efectividad-ftt');
+    const elCpk = document.getElementById('lbl-spc-cpk');
+    const elCp = document.getElementById('lbl-spc-cp');
 
     if (elTotal) elTotal.innerText = kpis.totalDisparos ?? kpis.TotalDisparos ?? 0;
     if (elOk) elOk.innerText = kpis.calidadOk ?? kpis.CalidadOk ?? 0;
     if (elNok) elNok.innerText = kpis.desviacionesNok ?? kpis.DesviacionesNok ?? 0;
     
-    // Si la tarjeta de efectividad cambió por la de Cpk en el HTML, no romperá el JS
-    if (elFtt) elFtt.innerText = (kpis.efectividadFtt ?? kpis.EfectividadFtt ?? 0) + '%';
+    // Soporte para KPIs de Cp y Cpk directos si vienen calculados del backend
+    if (elCpk && (kpis.spcCpk !== undefined || kpis.SpcCpk !== undefined)) {
+        const cpkVal = kpis.spcCpk ?? kpis.SpcCpk ?? 0;
+        elCpk.innerText = cpkVal.toFixed(2);
+    }
+    if (elCp && (kpis.spcCp !== undefined || kpis.SpcCp !== undefined)) {
+        const cpVal = kpis.spcCp ?? kpis.SpcCp ?? 0;
+        elCp.innerText = cpVal.toFixed(2);
+    }
 }
 
 function renderizarTabla(registros) {
@@ -258,17 +266,17 @@ async function exportarPDF() {
             const isOk = (r.estatusCalidad || r.EstatusCalidad) === 'OK' || (r.estatusCalidad || r.EstatusCalidad) === 'Solo OK';
             filasHtml += `
                 <tr>
-                    <td style="font-size: 11px;">${r.fechaFormatted || r.FechaFormatted}</td>
-                    <td>${r.celda || r.Celda}</td>
-                    <td>Salida ${r.salida || r.Salida}</td>
-                    <td>Turno ${r.turno || r.Turno}</td>
-                    <td><b>#${r.numSol || r.NumSol}</b></td>
-                    <td><b>${r.corriente || r.Corriente}</b> A</td>
-                    <td>${r.energia || r.Energia} J</td>
-                    <td>${r.tiempo || r.Tiempo} ms</td>
-                    <td>${r.penetracion || r.Penetracion} mm</td>
+                    <td style="font-size: 11px;">${r.fechaFormatted || r.FechaFormatted || '-'}</td>
+                    <td>${r.celda || r.Celda || 'N/A'}</td>
+                    <td>Salida ${r.salida ?? r.Salida ?? 1}</td>
+                    <td>Turno ${r.turno ?? r.Turno ?? 1}</td>
+                    <td><b>#${r.numSol ?? r.NumSol ?? r.idRegistro ?? 0}</b></td>
+                    <td><b>${r.corriente ?? r.Corriente ?? 0}</b> A</td>
+                    <td>${r.energia ?? r.Energia ?? 0} J</td>
+                    <td>${r.tiempo ?? r.Tiempo ?? 0} ms</td>
+                    <td>${r.penetracion ?? r.Penetracion ?? 0} mm</td>
                     <td><span class="badge ${isOk ? 'bg-success' : 'bg-danger'}">${isOk ? 'OK' : 'NOK'}</span></td>
-                    <td style="font-size: 11px;">${r.detallesFallas || r.DetallesFallas}</td>
+                    <td style="font-size: 11px;">${r.detallesFallas || r.DetallesFallas || ''}</td>
                 </tr>
             `;
         });
@@ -325,16 +333,20 @@ async function exportarPDF() {
 // -------------------------------------------------------------
 // CONTROL ESTADÍSTICO DE PROCESO (SPC) Y GRÁFICA
 // -------------------------------------------------------------
-function calcularIndicadoresSPC(datos, usl = 1330, lsl = 1270) {
+function calcularIndicadoresSPC(datos) {
     if (!datos || datos.length === 0) {
-        return { cp: 0, cpk: 0, media: 0, ucl: usl, lcl: lsl };
+        return { cp: 0, cpk: 0, media: 0, ucl: 1330, lcl: 1270, usl: 1330, lsl: 1270 };
     }
 
     const corrientes = datos.map(r => parseFloat(r.corriente ?? r.Corriente) || 0).filter(c => c > 0);
-    if (corrientes.length === 0) return { cp: 0, cpk: 0, media: 0, ucl: usl, lcl: lsl };
+    if (corrientes.length === 0) return { cp: 0, cpk: 0, media: 0, ucl: 1330, lcl: 1270, usl: 1330, lsl: 1270 };
 
     // 1. Media (X̄)
     const media = corrientes.reduce((acc, v) => acc + v, 0) / corrientes.length;
+
+    // Tolerancia adaptativa (+/- 30A respecto al promedio nominal si no es 1300A)
+    const usl = media > 1200 ? 1330 : Math.round(media + 30);
+    const lsl = media > 1200 ? 1270 : Math.round(media - 30);
 
     // 2. Desviación Estándar (σ)
     const varianza = corrientes.reduce((acc, v) => acc + Math.pow(v - media, 2), 0) / (corrientes.length > 1 ? corrientes.length - 1 : 1);
@@ -355,7 +367,9 @@ function calcularIndicadoresSPC(datos, usl = 1330, lsl = 1270) {
         cpk: parseFloat(cpk.toFixed(2)),
         media: parseFloat(media.toFixed(1)),
         ucl: parseFloat(ucl.toFixed(1)),
-        lcl: parseFloat(lcl.toFixed(1))
+        lcl: parseFloat(lcl.toFixed(1)),
+        usl: usl,
+        lsl: lsl
     };
 }
 
@@ -375,8 +389,8 @@ function actualizarGraficaSPC(registros) {
 
     chartSPC.data.labels = ultimos.map(r => `#${r.numSol || r.NumSol || r.idRegistro || r.IdRegistro}`);
     chartSPC.data.datasets[0].data = ultimos.map(r => r.corriente ?? r.Corriente ?? 0);
-    chartSPC.data.datasets[1].data = ultimos.map(() => 1330);
-    chartSPC.data.datasets[2].data = ultimos.map(() => 1270);
+    chartSPC.data.datasets[1].data = ultimos.map(() => spcStats.usl);
+    chartSPC.data.datasets[2].data = ultimos.map(() => spcStats.lsl);
     chartSPC.data.datasets[3].data = ultimos.map(() => spcStats.media);
     chartSPC.data.datasets[4].data = ultimos.map(() => spcStats.ucl);
     chartSPC.data.datasets[5].data = ultimos.map(() => spcStats.lcl);
@@ -402,7 +416,7 @@ function inicializarGrafica() {
                     tension: 0.2
                 },
                 {
-                    label: 'USL Tolerancia (1330A)',
+                    label: 'USL Tolerancia',
                     data: [],
                     borderColor: '#dc3545',
                     borderDash: [4, 4],
@@ -410,7 +424,7 @@ function inicializarGrafica() {
                     pointRadius: 0
                 },
                 {
-                    label: 'LSL Tolerancia (1270A)',
+                    label: 'LSL Tolerancia',
                     data: [],
                     borderColor: '#dc3545',
                     borderDash: [4, 4],
@@ -455,7 +469,7 @@ function inicializarGrafica() {
 function abrirModalDetalle(r) {
     document.getElementById('modal-num-sol').innerText = `#${r.numSol || r.NumSol || r.idRegistro || r.IdRegistro}`;
     document.getElementById('modal-serial').innerText = r.serialTrazabilidad || r.SerialTrazabilidad || 'N/A';
-    document.getElementById('modal-fecha').innerText = r.fechaFormatted || r.FechaFormatted || r.fecha || r.Fecha;
+    document.getElementById('modal-fecha').innerText = r.fechaFormatted || r.FechaFormatted || r.fecha || r.Fecha || '-';
 
     const estatusVal = r.estatusCalidad || r.EstatusCalidad || r.estatus || r.Estatus || '';
     const isOk = estatusVal === 'OK' || estatusVal === 'Solo OK';
