@@ -53,15 +53,17 @@ public class HomeController : Controller
         {
             string? estatusLimpio = NormalizarEstatus(estatus);
 
-            // Traer todos los registros aplicando los filtros activos
-            var registros = await repository.ObtenerParametrosPaginadosAsync(
+            var taskRegistros = repository.ObtenerParametrosPaginadosAsync(
                 identificadorId, estatusLimpio, fechaInicio, fechaFin, busqueda, pagina: 1, registrosPorPagina: int.MaxValue);
+            var taskMaquinas = enharttService.ObtenerMaquinasAsync();
 
-            var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
+            await Task.WhenAll(taskRegistros, taskMaquinas);
+
+            var registros = await taskRegistros;
+            var maquinas = (await taskMaquinas) ?? [];
             var dictMaquinas = maquinas.ToDictionary(m => m.Id, m => m.Celda ?? "CEN-01");
 
             var builder = new System.Text.StringBuilder();
-            // Encabezado CSV con compatibilidad UTF-8
             builder.AppendLine("Fecha/Hora,Celda,Salida,Turno,N° Soldadura,Corriente (A),Energia (J),Tiempo (ms),Penetracion (mm),Estatus,Detalle Desviacion");
 
             foreach (var p in registros)
@@ -95,10 +97,14 @@ public class HomeController : Controller
         {
             string? estatusLimpio = NormalizarEstatus(estatus);
 
-            var registros = await repository.ObtenerParametrosPaginadosAsync(
+            var taskRegistros = repository.ObtenerParametrosPaginadosAsync(
                 identificadorId, estatusLimpio, fechaInicio, fechaFin, busqueda, pagina: 1, registrosPorPagina: int.MaxValue);
+            var taskMaquinas = enharttService.ObtenerMaquinasAsync();
 
-            var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
+            await Task.WhenAll(taskRegistros, taskMaquinas);
+
+            var registros = await taskRegistros;
+            var maquinas = (await taskMaquinas) ?? [];
             var dictMaquinas = maquinas.ToDictionary(m => m.Id, m => m.Celda ?? "CEN-01");
 
             var dataFormateada = registros.Select(p => new
@@ -124,33 +130,59 @@ public class HomeController : Controller
         }
     }
 
+    [HttpPost]
+    public async Task<IActionResult> RevalidarCalidad([FromBody] RevalidarCalidadDto dto)
+    {
+        try
+        {
+            var (total, cambiaronOk, cambiaronNok) = await repository.RevalidarParametrosAsync(
+                dto.IdentificadorId,
+                dto.FechaInicio,
+                dto.FechaFin);
+
+            string mensaje = $"Revalidación completada: {total} registros procesados ({cambiaronOk} pasaron a OK | {cambiaronNok} cambiaron a NOK).";
+
+            return Json(new
+            {
+                success = true,
+                message = mensaje
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = $"Error en revalidación: {ex.Message}" });
+        }
+    }
+
+    public class RevalidarCalidadDto
+    {
+        public int? IdentificadorId { get; set; }
+        public DateTime? FechaInicio { get; set; }
+        public DateTime? FechaFin { get; set; }
+    }
+
     [HttpGet]
     public async Task<IActionResult> ObtenerParametros(
-        int? identificadorId,
-        string? estatus,
-        DateTime? fechaInicio,
-        DateTime? fechaFin,
-        string? busqueda,
-        int pagina = 1,
-        int registrosPorPagina = 5)
+       int? identificadorId,
+       string? estatus,
+       DateTime? fechaInicio,
+       DateTime? fechaFin,
+       string? busqueda,
+       int pagina = 1,
+       int registrosPorPagina = 5)
     {
         try
         {
             string? estatusLimpio = NormalizarEstatus(estatus);
 
-            // 1. Obtener la página actual de registros aplicando TODOS los filtros
             var registros = await repository.ObtenerParametrosPaginadosAsync(
                 identificadorId, estatusLimpio, fechaInicio, fechaFin, busqueda, pagina, registrosPorPagina);
 
-            // 2. Totales reales de la celda/fechas (sin filtrar por OK/NOK para calcular KPIs globales)
-            int totalDisparos = await repository.ContarParametrosTotalAsync(
-                identificadorId, null, fechaInicio, fechaFin, busqueda);
+            var (totalDisparos, okCount, nokCount) = await repository.ObtenerResumenKpisAsync(
+                identificadorId, fechaInicio, fechaFin, busqueda);
 
-            int okCount = await repository.ContarParametrosTotalAsync(
-                identificadorId, "OK", fechaInicio, fechaFin, busqueda);
-
-            int nokCount = await repository.ContarParametrosTotalAsync(
-                identificadorId, "NOK", fechaInicio, fechaFin, busqueda);
+            var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
+            var dictMaquinas = maquinas.ToDictionary(m => m.Id, m => m.Celda ?? "CEN-01");
 
             int totalFiltradoTabla = string.IsNullOrEmpty(estatusLimpio)
                 ? totalDisparos
@@ -159,9 +191,6 @@ public class HomeController : Controller
             double efectividad = totalDisparos > 0
                 ? Math.Round((double)okCount / totalDisparos * 100, 1)
                 : 0;
-
-            var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
-            var dictMaquinas = maquinas.ToDictionary(m => m.Id, m => m.Celda ?? "CEN-01");
 
             var dataFormateada = registros.Select(p => new
             {
@@ -184,10 +213,7 @@ public class HomeController : Controller
                 Modo = 1,
                 EstatusCalidad = string.IsNullOrEmpty(p.EstatusCalidad) ? "OK" : p.EstatusCalidad,
                 DetallesFallas = string.IsNullOrEmpty(p.DetallesFallas) ? "-" : p.DetallesFallas,
-
-                // Serial de Trazabilidad dinámico
                 SerialTrazabilidad = $"TCK-M{p.IdentificadorId ?? 0}-S{p.Salida ?? 1}-#{p.NumSol ?? p.IdRegistro}",
-
                 FechaFormatted = p.Fecha.HasValue ? p.Fecha.Value.ToString("yyyy-MM-dd HH:mm:ss") : DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
             });
 
@@ -197,7 +223,7 @@ public class HomeController : Controller
                 data = dataFormateada,
                 total = totalFiltradoTabla,
                 paginaActual = pagina,
-                totalPaginas = (int)Math.Ceiling((double)totalFiltradoTabla / registrosPorPagina),
+                totalPaginas = (int)Math.Ceiling((double)totalFiltradoTabla / Math.Max(1, registrosPorPagina)),
                 kpis = new
                 {
                     totalDisparos = totalDisparos,
