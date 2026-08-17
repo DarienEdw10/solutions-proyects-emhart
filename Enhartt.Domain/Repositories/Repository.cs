@@ -24,12 +24,18 @@ namespace Enhartt.Domain.Repositories
                                  .ToListAsync();
         }
 
-        // Lógica de historial: Desactiva recetas anteriores y crea el nuevo registro activo con comentario de bitácora
+        public async Task<IEnumerable<Receta>> ObtenerTodasLasRecetasActivasAsync()
+        {
+            return await _context.Receta
+                                 .AsNoTracking()
+                                 .Where(r => r.Estado == true)
+                                 .ToListAsync();
+        }
+
         public async Task ActualizarRecetaConHistorialAsync(Receta nuevaReceta, string usuario)
         {
             string paramLimpio = nuevaReceta.Parametro?.Trim() ?? "";
 
-            // 1. Desactivar todos los registros previos de ese mismo parámetro/salida/máquina
             var recetasAnteriores = await _context.Receta
                 .Where(r => r.IdMaquina == nuevaReceta.IdMaquina &&
                             r.Salida == nuevaReceta.Salida &&
@@ -45,12 +51,11 @@ namespace Enhartt.Domain.Repositories
                 recetaVieja.ModificadoPor = usuario;
             }
 
-            // 2. Insertar el nuevo registro que ahora será el único ACTIVO
             nuevaReceta.Estado = true;
             nuevaReceta.FechaCreacion = DateTime.Now;
             nuevaReceta.ModificadoPor = usuario;
-            nuevaReceta.Comentario = string.IsNullOrWhiteSpace(nuevaReceta.Comentario) 
-                ? "Ajuste operativo de parámetros" 
+            nuevaReceta.Comentario = string.IsNullOrWhiteSpace(nuevaReceta.Comentario)
+                ? "Ajuste operativo de parámetros"
                 : nuevaReceta.Comentario.Trim();
 
             await _context.Receta.AddAsync(nuevaReceta);
@@ -68,9 +73,9 @@ namespace Enhartt.Domain.Repositories
 
             if (recetaBd == null)
             {
-                recetaBd = await _context.Receta.FirstOrDefaultAsync(r => 
-                    r.IdMaquina == receta.IdMaquina && 
-                    r.Salida == receta.Salida && 
+                recetaBd = await _context.Receta.FirstOrDefaultAsync(r =>
+                    r.IdMaquina == receta.IdMaquina &&
+                    r.Salida == receta.Salida &&
                     r.Parametro != null && r.Parametro.Trim() == receta.Parametro.Trim());
             }
 
@@ -93,8 +98,8 @@ namespace Enhartt.Domain.Repositories
             receta.Estado = true;
             receta.FechaCreacion = DateTime.Now;
             receta.ModificadoPor = usuario;
-            receta.Comentario = string.IsNullOrWhiteSpace(receta.Comentario) 
-                ? "Alta inicial de parámetro" 
+            receta.Comentario = string.IsNullOrWhiteSpace(receta.Comentario)
+                ? "Alta inicial de parámetro"
                 : receta.Comentario.Trim();
 
             var entityEntry = await _context.Receta.AddAsync(receta);
@@ -126,8 +131,8 @@ namespace Enhartt.Domain.Repositories
 
             if (fechaFin.HasValue)
             {
-                var fin = fechaFin.Value.Date.AddDays(1).AddTicks(-1);
-                query = query.Where(r => (r.FechaModificacion ?? r.FechaCreacion) <= fin);
+                var fin = fechaFin.Value.Date.AddDays(1);
+                query = query.Where(r => (r.FechaModificacion ?? r.FechaCreacion) < fin);
             }
 
             return await query.OrderByDescending(r => r.FechaModificacion ?? r.FechaCreacion)
@@ -205,13 +210,20 @@ namespace Enhartt.Domain.Repositories
                 query = query.Where(parametro => parametro.Fecha >= fechaInicio.Value.Date);
 
             if (fechaFin.HasValue)
-                query = query.Where(parametro => parametro.Fecha <= fechaFin.Value.Date.AddDays(1).AddTicks(-1));
+            {
+                var finLimite = fechaFin.Value.Date.AddDays(1);
+                query = query.Where(parametro => parametro.Fecha < finLimite);
+            }
 
             if (!string.IsNullOrEmpty(busqueda))
             {
-                query = query.Where(parametro => (parametro.NumSol.HasValue && EF.Functions.Like(parametro.NumSol.Value.ToString(), $"%{busqueda}%")) ||
-                                                 (parametro.DetallesFallas != null && parametro.DetallesFallas.Contains(busqueda)) ||
-                                                 (parametro.Linea != null && parametro.Linea.Contains(busqueda)));
+                string term = busqueda.Trim();
+                bool esNumero = int.TryParse(term, out int numBusqueda);
+
+                query = query.Where(parametro =>
+                    (esNumero && parametro.NumSol == numBusqueda) ||
+                    (parametro.DetallesFallas != null && parametro.DetallesFallas.Contains(term)) ||
+                    (parametro.Linea != null && parametro.Linea.Contains(term)));
             }
 
             return query;
@@ -232,6 +244,26 @@ namespace Enhartt.Domain.Repositories
                               .Skip((pagina - 1) * registrosPorPagina)
                               .Take(registrosPorPagina)
                               .ToListAsync();
+        }
+
+        public async Task<(int totalDisparos, int okCount, int nokCount)> ObtenerResumenKpisAsync(
+            int? identificadorId,
+            DateTime? fechaInicio,
+            DateTime? fechaFin,
+            string? busqueda)
+        {
+            var query = ConstruirFiltroParametros(identificadorId, null, fechaInicio, fechaFin, busqueda);
+
+            var agrupados = await query
+                .GroupBy(p => p.EstatusCalidad)
+                .Select(g => new { Estatus = g.Key, Total = g.Count() })
+                .ToListAsync();
+
+            int ok = agrupados.FirstOrDefault(g => g.Estatus != null && g.Estatus.Equals("OK", StringComparison.OrdinalIgnoreCase))?.Total ?? 0;
+            int nok = agrupados.FirstOrDefault(g => g.Estatus != null && g.Estatus.Equals("NOK", StringComparison.OrdinalIgnoreCase))?.Total ?? 0;
+            int total = agrupados.Sum(g => g.Total);
+
+            return (total, ok, nok);
         }
 
         public async Task<int> ContarParametrosTotalAsync(
@@ -262,6 +294,117 @@ namespace Enhartt.Domain.Repositories
             var entityEntry = await _context.Parametros.AddAsync(parametro);
             await _context.SaveChangesAsync();
             return entityEntry.Entity;
+        }
+
+        // =============================================================
+        // REVALIDACIÓN DE CALIDAD
+        // =============================================================
+        public async Task<(int totalProcesados, int cambiaronOk, int cambiaronNok)> RevalidarParametrosAsync(
+            int? identificadorId,
+            DateTime? fechaInicio,
+            DateTime? fechaFin)
+        {
+            var query = _context.Parametros.AsQueryable();
+
+            if (identificadorId.HasValue && identificadorId.Value > 0)
+                query = query.Where(p => p.IdentificadorId == identificadorId.Value);
+
+            if (fechaInicio.HasValue)
+                query = query.Where(p => p.Fecha >= fechaInicio.Value.Date);
+
+            if (fechaFin.HasValue)
+            {
+                var finLimite = fechaFin.Value.Date.AddDays(1);
+                query = query.Where(p => p.Fecha < finLimite);
+            }
+
+            var parametros = await query.ToListAsync();
+            if (parametros.Count == 0) return (0, 0, 0);
+
+            var recetasActivas = await _context.Receta
+                .AsNoTracking()
+                .Where(r => r.Estado == true)
+                .ToListAsync();
+
+            int totalProcesados = 0;
+            int cambiaronOk = 0;
+            int cambiaronNok = 0;
+
+            static string NormalizarNombre(string? texto)
+            {
+                if (string.IsNullOrWhiteSpace(texto)) return "";
+                return texto.Trim().ToLower()
+                    .Replace("á", "a")
+                    .Replace("é", "e")
+                    .Replace("í", "i")
+                    .Replace("ó", "o")
+                    .Replace("ú", "u")
+                    .Replace(" ", "");
+            }
+
+            foreach (var p in parametros)
+            {
+                if (!p.IdentificadorId.HasValue || !p.Salida.HasValue) continue;
+
+                var recetasSalida = recetasActivas
+                    .Where(r => r.IdMaquina == p.IdentificadorId.Value && 
+                                r.Salida == p.Salida.Value && 
+                                (r.MinVal != 0 || r.MaxVal != 0))
+                    .ToList();
+
+                List<string> fallas = new();
+
+                if (recetasSalida.Count == 0)
+                {
+                    fallas.Add($"Sin receta de control activa configurada para Salida {p.Salida.Value}");
+                }
+                else
+                {
+                    void Validar(string parametro, double? valor)
+                    {
+                        string paramNorm = NormalizarNombre(parametro);
+                        var r = recetasSalida.FirstOrDefault(rec => NormalizarNombre(rec.Parametro) == paramNorm);
+
+                        if (r != null && valor.HasValue)
+                        {
+                            double min = Math.Min(r.MinVal, r.MaxVal);
+                            double max = Math.Max(r.MinVal, r.MaxVal);
+
+                            if (valor.Value < min || valor.Value > max)
+                            {
+                                fallas.Add($"{parametro}: {valor.Value} [Min:{r.MinVal}, Max:{r.MaxVal}]");
+                            }
+                        }
+                    }
+
+                    Validar("Corriente", p.Corriente);
+                    Validar("Energia", p.Energia);
+                    Validar("Tiempo", p.Tiempo);
+                    Validar("Penetracion", p.Penetracion);
+                    Validar("VolArc", p.VolArc);
+                    Validar("VolPri", p.VolPri);
+                }
+
+                string estatusPrevio = (p.EstatusCalidad ?? "").Trim().ToUpper();
+                string nuevoEstatus = fallas.Count == 0 ? "OK" : "NOK";
+                string? nuevosDetalles = fallas.Count == 0 ? null : string.Join(" | ", fallas);
+
+                if (estatusPrevio != "OK" && nuevoEstatus == "OK")
+                {
+                    cambiaronOk++;
+                }
+                else if (estatusPrevio == "OK" && nuevoEstatus == "NOK")
+                {
+                    cambiaronNok++;
+                }
+
+                p.EstatusCalidad = nuevoEstatus;
+                p.DetallesFallas = nuevosDetalles;
+                totalProcesados++;
+            }
+
+            await _context.SaveChangesAsync();
+            return (totalProcesados, cambiaronOk, cambiaronNok);
         }
     }
 }

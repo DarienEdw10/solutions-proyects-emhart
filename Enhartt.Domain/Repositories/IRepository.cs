@@ -9,8 +9,15 @@ namespace Enhartt.Domain.Repositories
         // MÓDULO RECETAS (Tolerancias)
         // -------------------------------------------------------------
         Task<IEnumerable<Receta>> ObtenerRecetasPorMaquinaAsync(int idMaquina);
+        Task<IEnumerable<Receta>> ObtenerTodasLasRecetasActivasAsync(); // Carga optimizada
         Task<Receta?> ActualizarRecetaAsync(Receta receta, string usuario);
         Task<Receta?> AgregarRecetaAsync(Receta receta, string usuario);
+        Task ActualizarRecetaConHistorialAsync(Receta nuevaReceta, string usuario);
+        Task<IEnumerable<Receta>> ObtenerAuditoriaRecetasAsync(
+            int? idMaquina,
+            string? salida,
+            DateTime? fechaInicio,
+            DateTime? fechaFin);
 
         // -------------------------------------------------------------
         // MÓDULO MAQUINAS (Catálogo Celdas Tucker)
@@ -32,6 +39,12 @@ namespace Enhartt.Domain.Repositories
             int pagina,
             int registrosPorPagina);
 
+        Task<(int totalDisparos, int okCount, int nokCount)> ObtenerResumenKpisAsync(
+            int? identificadorId,
+            DateTime? fechaInicio,
+            DateTime? fechaFin,
+            string? busqueda); // Cálculo agrupado en 1 sola consulta
+
         Task<int> ContarParametrosTotalAsync(
             int? identificadorId,
             string? estatus,
@@ -42,11 +55,9 @@ namespace Enhartt.Domain.Repositories
         Task<IEnumerable<int>> ObtenerSalidasPorMaquinaAsync(int idMaquina);
         Task<Parametro?> AgregarParametroIngestaAsync(Parametro parametro);
 
-        Task<IEnumerable<Receta>> ObtenerAuditoriaRecetasAsync(int? idMaquina,
-            string? salida,
+        Task<(int totalProcesados, int cambiaronOk, int cambiaronNok)> RevalidarParametrosAsync(
+            int? identificadorId,
             DateTime? fechaInicio,
             DateTime? fechaFin);
-        Task ActualizarRecetaConHistorialAsync(Receta nuevaReceta, string usuario);
     }
-
 }

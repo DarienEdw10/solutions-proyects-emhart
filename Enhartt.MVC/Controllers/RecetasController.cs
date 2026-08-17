@@ -38,52 +38,41 @@ public class RecetasController : Controller
 
     private async Task<IActionResult> CargarVistaRecetasAsync(string vistaNombre)
     {
+        // 1. Obtener máquinas y recetas activas en solo 2 consultas
         var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
+        var todasLasRecetas = await repository.ObtenerTodasLasRecetasActivasAsync() ?? [];
+
+        // 2. Mapeo en memoria (O(1) lookup)
+        var recetasPorMaquina = todasLasRecetas
+            .GroupBy(r => r.IdMaquina)
+            .ToDictionary(grp => grp.Key, grp => grp.ToList());
 
         var celdas = maquinas
             .Where(m => !string.IsNullOrEmpty(m.Celda))
             .GroupBy(m => m.Celda!)
-            .ToDictionary(
-                grp => grp.Key,
-                grp => grp.ToList()
-            );
-
-        List<CeldaViewModel> celdasVM = [];
-
-        foreach (var celdaKVP in celdas)
-        {
-            List<MaquinaViewModel> maquinasVM = [];
-
-            foreach (var maquina in celdaKVP.Value)
+            .Select(grp => new CeldaViewModel
             {
-                var recetasDb = await repository.ObtenerRecetasPorMaquinaAsync(maquina.Id) ?? [];
-
-                maquinasVM.Add(new MaquinaViewModel
+                Celda = grp.Key,
+                Maquinas = grp.Select(maquina => new MaquinaViewModel
                 {
                     Id = maquina.Id,
                     IdMaquina = maquina.IdMaquina ?? "",
-                    Recetas = recetasDb.Select(r => new RecetaViewModel
-                    {
-                        Id = r.IdReferencia,
-                        Salida = r.Salida.ToString(),
-                        Parametro = r.Parametro ?? "Límite Control",
-                        MinVal = r.MinVal,
-                        MaxVal = r.MaxVal,
-                        FechaModificacion = r.FechaModificacion ?? r.FechaCreacion,
-                        ModificadoPor = r.ModificadoPor ?? "SISTEMA_INICIAL",
-                        Estado = r.Estado
-                    }).ToList()
-                });
-            }
+                    Recetas = (recetasPorMaquina.TryGetValue(maquina.Id, out var recs) ? recs : [])
+                        .Select(r => new RecetaViewModel
+                        {
+                            Id = r.IdReferencia,
+                            Salida = r.Salida.ToString(),
+                            Parametro = r.Parametro ?? "Límite Control",
+                            MinVal = r.MinVal,
+                            MaxVal = r.MaxVal,
+                            FechaModificacion = r.FechaModificacion ?? r.FechaCreacion,
+                            ModificadoPor = r.ModificadoPor ?? "SISTEMA_INICIAL",
+                            Estado = r.Estado
+                        }).ToList()
+                }).ToList()
+            }).ToList();
 
-            celdasVM.Add(new CeldaViewModel
-            {
-                Celda = celdaKVP.Key,
-                Maquinas = maquinasVM
-            });
-        }
-
-        return View(vistaNombre, new RecetasViewModel() { Celdas = celdasVM });
+        return View(vistaNombre, new RecetasViewModel() { Celdas = celdas });
     }
 
     [HttpPost]
@@ -115,7 +104,7 @@ public class RecetasController : Controller
                     Estado = true,
                     FechaCreacion = DateTime.Now,
                     ModificadoPor = usuario,
-                    Comentario = motivo // <-- Asignación del comentario en bitácora
+                    Comentario = motivo
                 };
 
                 // Desactiva la versión anterior e inserta la nueva como ACTIVA
@@ -148,7 +137,7 @@ public class RecetasController : Controller
                 MaxVal = h.MaxVal,
                 Estado = h.Estado ? "ACTIVO" : "INACTIVO",
                 Usuario = string.IsNullOrEmpty(h.ModificadoPor) ? "SISTEMA_INICIAL" : h.ModificadoPor,
-                Comentario = string.IsNullOrWhiteSpace(h.Comentario) ? "-" : h.Comentario // <-- Retorno a la tabla
+                Comentario = string.IsNullOrWhiteSpace(h.Comentario) ? "-" : h.Comentario
             });
 
             return Json(new { success = true, data = resultadoDto });
@@ -278,7 +267,7 @@ public class GuardarRecetaDto
 {
     public int IdMaquina { get; set; }
     public string Salida { get; set; } = string.Empty;
-    public string? Comentario { get; set; } // <-- Captura el motivo/bitácora
+    public string? Comentario { get; set; }
     public List<ParametroLimiteDto> Parametros { get; set; } = [];
 }
 

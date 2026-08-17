@@ -13,322 +13,350 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label fw-bold small mb-1"><i class="bi bi-patch-check text-success me-1"></i>Estatus Calidad</label>
-                <select id="filtro-estatus" class="form-select">
-                    <option value="">-- Todos --</option>
-                    <option value="Solo OK">🟢 Solo OK</option>
-                    <option value="Solo NOK">🔴 Solo NOK</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label fw-bold small mb-1"><i class="bi bi-calendar-event me-1"></i>Fecha Inicio</label>
-                <input type="date" id="filtro-fecha-inicio" class="form-control">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label fw-bold small mb-1"><i class="bi bi-calendar-event me-1"></i>Fecha Fin</label>
-                <input type="date" id="filtro-fecha-fin" class="form-control">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label fw-bold small mb-1"><i class="bi bi-search me-1"></i>Búsqueda Rápida</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" id="buscador-global" class="form-control" placeholder="Ej. #7440...">
+                <label class="form-label fw-bold small mb-1"><i class="bi bi-patch-check text-success me-1"></i>Estatus
+                    Calidad</label>
+                    <select id="filtro-estatus" class="form-select">
+                        <option value="">-- Todos --</option>
+                        <option value="Solo OK">🟢 Solo OK</option>
+                        <option value="Solo NOK">🔴 Solo NOK</option>
+                    </select>
                 </div>
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-primary w-100 fw-bold" onclick="aplicarFiltros()">
-                    <i class="bi bi-funnel-fill me-1"></i> Filtrar Datos
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 2. Estado de Salud de Celda Filtrada (Una sola tarjeta dinámica) -->
-<div class="row mb-3 mb-md-4">
-    <div class="col-12" id="contenedor-estado-celda-filtrada">
-        <div class="card border-0 shadow-sm p-3 bg-white border-start border-primary border-4">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <span class="text-muted small fw-bold text-uppercase d-block">Celda en Monitoreo</span>
-                    <h5 class="fw-bold mb-0 text-dark" id="lbl-celda-activa-nombre">TODAS LAS CELDAS</h5>
-                    <small class="text-muted font-monospace" id="lbl-celda-activa-id">GLOBAL</small>
-                </div>
-                <div class="text-end">
-                    <span class="badge bg-success mb-1" id="badge-estatus-celda-activa">🟢 OPERANDO</span>
-                    <div class="small text-muted font-monospace" id="lbl-ultimo-disparo-activo">Último disparo: Activo</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 3. KPIs de Producción y Control Estadístico (SPC / Cpk) -->
-<div class="row g-2 g-md-3 mb-3 mb-md-4">
-    <div class="col-6 col-xl-3">
-        <div class="card border-0 shadow-sm border-start border-primary border-4 h-100">
-            <div class="card-body p-3">
-                <div class="text-muted small fw-bold text-uppercase">Total Disparos</div>
-                <div class="h3 mb-0 fw-bold text-dark" id="lbl-total-disparos">0</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-xl-3">
-        <div class="card border-0 shadow-sm border-start border-success border-4 h-100">
-            <div class="card-body p-3">
-                <div class="text-muted small fw-bold text-uppercase">Calidad OK</div>
-                <div class="h3 mb-0 fw-bold text-success" id="lbl-calidad-ok">0</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-xl-3">
-        <div class="card border-0 shadow-sm border-start border-danger border-4 h-100">
-            <div class="card-body p-3">
-                <div class="text-muted small fw-bold text-uppercase">Desviaciones (NOK)</div>
-                <div class="h3 mb-0 fw-bold text-danger" id="lbl-desviaciones-nok">0</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-xl-3">
-        <div class="card border-0 shadow-sm border-start border-warning border-4 h-100">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="text-muted small fw-bold text-uppercase">Capacidad Cpk</div>
-                        <div class="h3 mb-0 fw-bold text-warning" id="lbl-spc-cpk">0.00</div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small mb-1"><i class="bi bi-calendar-event me-1"></i>Fecha
+                        Inicio</label>
+                        <input type="date" id="filtro-fecha-inicio" class="form-control">
                     </div>
-                    <div class="text-end">
-                        <small class="text-muted d-block font-monospace">Cp: <span id="lbl-spc-cp">0.00</span></small>
-                        <span class="badge bg-light text-dark border" title="Cpk >= 1.33 indica proceso capaz">SPC 3-Sigma</span>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold small mb-1"><i class="bi bi-calendar-event me-1"></i>Fecha Fin</label>
+                        <input type="date" id="filtro-fecha-fin" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold small mb-1"><i class="bi bi-search me-1"></i>Búsqueda Rápida</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" id="buscador-global" class="form-control" placeholder="Ej. #7440...">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100 fw-bold" onclick="aplicarFiltros()">
+                            <i class="bi bi-funnel-fill me-1"></i> Filtrar Datos
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- 4. Gráfica de Tendencia SPC -->
-<div class="card border-0 shadow-sm my-3 my-md-4">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h6 class="card-title mb-0 fw-bold">
-            <i class="bi bi-graph-up text-primary me-2"></i>Tendencia de Corriente (A) y Control Estadístico de Proceso (SPC)
-        </h6>
-        <span class="badge bg-light text-dark border">Límites 3-Sigma (UCL/LCL)</span>
-    </div>
-    <div class="card-body">
-        <div style="position: relative; height: 240px; width: 100%;">
-            <canvas id="graficaControl"></canvas>
-        </div>
-    </div>
-</div>
-
-<!-- 5. Tabla Principal -->
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <h6 class="card-title mb-0 fw-bold">
-            <i class="bi bi-list-task me-2 text-primary"></i>Registros Recientes <small class="text-muted fw-normal">(Haz clic en una fila para ver el detalle técnico)</small>
-        </h6>
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-success btn-sm fw-bold" onclick="exportarExcel()">
-                <i class="bi bi-file-earmark-excel-fill me-1"></i>Excel
-            </button>
-            <button class="btn btn-outline-danger btn-sm fw-bold" onclick="exportarPDF()">
-                <i class="bi bi-file-earmark-pdf-fill me-1"></i>PDF
-            </button>
-        </div>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 text-nowrap" id="tabla-monitoreo">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Fecha / Hora</th>
-                        <th>Celda</th>
-                        <th>Salida</th>
-                        <th>Turno</th>
-                        <th>N° Soldadura</th>
-                        <th>Corriente</th>
-                        <th>Energía</th>
-                        <th>Tiempo</th>
-                        <th>Penetración</th>
-                        <th>Estatus</th>
-                        <th>Detalle Desviación</th>
-                    </tr>
-                </thead>
-                <tbody id="tabla-body">
-                    <!-- Inyección JS -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center">
-        <span class="small text-muted" id="lbl-paginacion-info">Mostrando 0-0 de 0 registros</span>
-        <nav>
-            <ul class="pagination pagination-sm mb-0" id="ul-paginacion">
-                <!-- Páginas JS -->
-            </ul>
-        </nav>
-    </div>
-</div>
-
-<!-- Modal de Ficha Técnica Detallada -->
-<div class="modal fade" id="modalDetalleSoldadura" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-dark text-white py-3">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="p-2 bg-primary bg-opacity-25 rounded text-warning">
-                        <i class="bi bi-cpu-fill fs-5"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-bold mb-0">Ficha Técnica de Soldadura <span id="modal-num-sol" class="text-warning">#0</span></h5>
-                        <small class="text-muted">Monitoreo Telemétrico en Tiempo Real</small>
-                    </div>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body p-4 bg-light">
-                <div class="row g-3 mb-4">
-                    <div class="col-md-4">
-                        <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
-                            <div class="card-body p-3">
-                                <span class="text-muted small fw-bold text-uppercase d-block mb-1">Serial Trazabilidad</span>
-                                <strong class="font-monospace fs-6 text-primary" id="modal-serial">N/A</strong>
+        <!-- 2. Estado de Salud de Celda Filtrada (Una sola tarjeta dinámica) -->
+        <div class="row mb-3 mb-md-4">
+            <div class="col-12" id="contenedor-estado-celda-filtrada">
+                <div class="card border-0 shadow-sm p-3 bg-white border-start border-primary border-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small fw-bold text-uppercase d-block">Celda en Monitoreo</span>
+                            <h5 class="fw-bold mb-0 text-dark" id="lbl-celda-activa-nombre">TODAS LAS CELDAS</h5>
+                            <small class="text-muted font-monospace" id="lbl-celda-activa-id">GLOBAL</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success mb-1" id="badge-estatus-celda-activa">🟢 OPERANDO</span>
+                            <div class="small text-muted font-monospace" id="lbl-ultimo-disparo-activo">Último disparo: Activo
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
-                            <div class="card-body p-3">
-                                <span class="text-muted small fw-bold text-uppercase d-block mb-1">Timestamp de Celda</span>
-                                <strong class="text-dark font-monospace" id="modal-fecha">-</strong>
-                            </div>
-                        </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. KPIs de Producción y Control Estadístico (SPC / Cpk) -->
+        <div class="row g-2 g-md-3 mb-3 mb-md-4">
+            <div class="col-6 col-xl-3">
+                <div class="card border-0 shadow-sm border-start border-primary border-4 h-100">
+                    <div class="card-body p-3">
+                        <div class="text-muted small fw-bold text-uppercase">Total Disparos</div>
+                        <div class="h3 mb-0 fw-bold text-dark" id="lbl-total-disparos">0</div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card border-0 shadow-sm h-100 border-start border-4 border-secondary">
-                            <div class="card-body p-3 d-flex justify-content-between align-items-center">
-                                <div>
-                                    <span class="text-muted small fw-bold text-uppercase d-block mb-1">Estatus de Calidad</span>
-                                    <span id="modal-estatus-badge">-</span>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card border-0 shadow-sm border-start border-success border-4 h-100">
+                    <div class="card-body p-3">
+                        <div class="text-muted small fw-bold text-uppercase">Calidad OK</div>
+                        <div class="h3 mb-0 fw-bold text-success" id="lbl-calidad-ok">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card border-0 shadow-sm border-start border-danger border-4 h-100">
+                    <div class="card-body p-3">
+                        <div class="text-muted small fw-bold text-uppercase">Desviaciones (NOK)</div>
+                        <div class="h3 mb-0 fw-bold text-danger" id="lbl-desviaciones-nok">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card border-0 shadow-sm border-start border-warning border-4 h-100">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-muted small fw-bold text-uppercase">Capacidad Cpk</div>
+                                <div class="h3 mb-0 fw-bold text-warning" id="lbl-spc-cpk">0.00</div>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted d-block font-monospace">Cp: <span id="lbl-spc-cp">0.00</span></small>
+                                <span class="badge bg-light text-dark border" title="Cpk >= 1.33 indica proceso capaz">SPC
+                                    3-Sigma</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h6 class="fw-bold mb-0 text-dark">
-                            <i class="bi bi-lightning-charge-fill text-warning me-2"></i>Parámetros Eléctricos y Mecánicos
-                        </h6>
-                    </div>
-                    <div class="card-body pt-0">
-                        <div class="row g-3 text-center">
-                            <div class="col-6 col-md-3">
-                                <div class="p-2 border rounded bg-light">
-                                    <small class="text-muted d-block small">Voltaje Arco Piloto</small>
-                                    <span class="fw-bold fs-6 text-dark" id="modal-volarc">0</span> <small class="text-muted">V</small>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <div class="p-2 border rounded bg-light">
-                                    <small class="text-muted d-block small">Voltaje Principal</small>
-                                    <span class="fw-bold fs-6 text-dark" id="modal-volpri">0</span> <small class="text-muted">V</small>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <div class="p-2 border rounded bg-light">
-                                    <small class="text-muted d-block small">Corriente Soldadura</small>
-                                    <span class="fw-bold fs-6 text-primary" id="modal-corriente">0</span> <small class="text-muted">A</small>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <div class="p-2 border rounded bg-light">
-                                    <small class="text-muted d-block small">Energía Disipada</small>
-                                    <span class="fw-bold fs-6 text-dark" id="modal-energia">0</span> <small class="text-muted">J</small>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <div class="p-2 border rounded bg-light">
-                                    <small class="text-muted d-block small">Tiempo de Arco</small>
-                                    <span class="fw-bold fs-6 text-dark" id="modal-tiempo">0</span> <small class="text-muted">ms</small>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <div class="p-2 border rounded bg-light">
-                                    <small class="text-muted d-block small">Penetración Perno</small>
-                                    <span class="fw-bold fs-6 text-dark" id="modal-penetracion">0</span> <small class="text-muted">mm</small>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <div class="p-2 border rounded bg-light">
-                                    <small class="text-muted d-block small">Elevación Pistola</small>
-                                    <span class="fw-bold fs-6 text-dark" id="modal-elevacion">0</span> <small class="text-muted">mm</small>
-                                </div>
-                            </div>
-                            <div class="col-6 col-md-3">
-                                <div class="p-2 border rounded bg-light">
-                                    <small class="text-muted d-block small">Longitud Perno</small>
-                                    <span class="fw-bold fs-6 text-dark" id="modal-lonper">0</span> <small class="text-muted">mm</small>
-                                </div>
-                            </div>
-                        </div>
+            <!-- 4. Gráfica de Tendencia SPC -->
+            <div class="card border-0 shadow-sm my-3 my-md-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0 fw-bold">
+                        <i class="bi bi-graph-up text-primary me-2"></i>Tendencia de Corriente (A) y Control Estadístico de Proceso
+                        (SPC)
+                    </h6>
+                    <span class="badge bg-light text-dark border">Límites 3-Sigma (UCL/LCL)</span>
+                </div>
+                <div class="card-body">
+                    <div style="position: relative; height: 240px; width: 100%;">
+                        <canvas id="graficaControl"></canvas>
                     </div>
                 </div>
+            </div>
 
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h6 class="fw-bold mb-0 text-dark">
-                            <i class="bi bi-shield-check text-success me-2"></i>Diagnóstico de Controlador Tucker
-                        </h6>
+            <!-- 5. Tabla Principal -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h6 class="card-title mb-0 fw-bold">
+                        <i class="bi bi-list-task me-2 text-primary"></i>Registros Recientes <small
+                        class="text-muted fw-normal">(Haz clic en una fila para ver el detalle técnico)</small>
+                    </h6>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-success btn-sm fw-bold" onclick="exportarExcel()">
+                            <i class="bi bi-file-earmark-excel-fill me-1"></i>Excel
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm fw-bold" onclick="exportarPDF()">
+                            <i class="bi bi-file-earmark-pdf-fill me-1"></i>PDF
+                        </button>
+                        <button type="button" id="btnRevalidarCalidad" class="btn btn-outline-warning btn-sm fw-bold shadow-sm">
+                            <i class="bi bi-arrow-repeat me-1"></i>Revalidar Calidad
+                        </button>
                     </div>
-                    <div class="card-body pt-0">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <div class="d-flex justify-content-between align-items-center p-2 border rounded bg-white">
-                                    <span class="small text-muted">Código Error:</span>
-                                    <span class="badge bg-secondary" id="modal-err">Err: 0</span>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="d-flex justify-content-between align-items-center p-2 border rounded bg-white">
-                                    <span class="small text-muted">Alarma Sistema:</span>
-                                    <span class="badge bg-secondary" id="modal-alarma">Alarma: 0</span>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="d-flex justify-content-between align-items-center p-2 border rounded bg-white">
-                                    <span class="small text-muted">Modo Operación:</span>
-                                    <span class="badge bg-info text-dark" id="modal-modo">Auto (1)</span>
-                                </div>
-                            </div>
-                        </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-nowrap" id="tabla-monitoreo">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Fecha / Hora</th>
+                                    <th>Celda</th>
+                                    <th>Salida</th>
+                                    <th>Turno</th>
+                                    <th>N° Soldadura</th>
+                                    <th>Corriente</th>
+                                    <th>Energía</th>
+                                    <th>Tiempo</th>
+                                    <th>Penetración</th>
+                                    <th>Estatus</th>
+                                    <th>Detalle Desviación</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-body">
+                                <!-- Inyección JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center">
+                    <span class="small text-muted" id="lbl-paginacion-info">Mostrando 0-0 de 0 registros</span>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0" id="ul-paginacion">
+                            <!-- Páginas JS -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
 
-                        <div class="alert alert-danger shadow-sm mt-3 mb-0 d-none" id="modal-alert-desviaciones">
+            <!-- Modal de Ficha Técnica Detallada -->
+            <div class="modal fade" id="modalDetalleSoldadura" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content border-0 shadow-lg">
+                        <div class="modal-header bg-dark text-white py-3">
                             <div class="d-flex align-items-center gap-2">
-                                <i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
+                                <div class="p-2 bg-primary bg-opacity-25 rounded text-warning">
+                                    <i class="bi bi-cpu-fill fs-5"></i>
+                                </div>
                                 <div>
-                                    <strong class="d-block">Desviación Fuera de Tolerancia Detectada:</strong>
-                                    <span id="modal-detalles-fallas" class="font-monospace small"></span>
+                                    <h5 class="modal-title fw-bold mb-0">Ficha Técnica de Soldadura <span id="modal-num-sol"
+                                                                                                              class="text-warning">#0</span></h5>
+                                        <small class="text-muted">Monitoreo Telemétrico en Tiempo Real</small>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                            </div>
+
+                            <div class="modal-body p-4 bg-light">
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-4">
+                                        <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+                                            <div class="card-body p-3">
+                                                <span class="text-muted small fw-bold text-uppercase d-block mb-1">Serial
+                                                    Trazabilidad</span>
+                                                    <strong class="font-monospace fs-6 text-primary" id="modal-serial">N/A</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card border-0 shadow-sm h-100 border-start border-4 border-info">
+                                                <div class="card-body p-3">
+                                                    <span class="text-muted small fw-bold text-uppercase d-block mb-1">Timestamp de
+                                                        Celda</span>
+                                                        <strong class="text-dark font-monospace" id="modal-fecha">-</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="card border-0 shadow-sm h-100 border-start border-4 border-secondary">
+                                                    <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <span class="text-muted small fw-bold text-uppercase d-block mb-1">Estatus de
+                                                                Calidad</span>
+                                                                <span id="modal-estatus-badge">-</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="card border-0 shadow-sm mb-4">
+                                                <div class="card-header bg-white border-0 py-3">
+                                                    <h6 class="fw-bold mb-0 text-dark">
+                                                        <i class="bi bi-lightning-charge-fill text-warning me-2"></i>Parámetros Eléctricos y
+                                                        Mecánicos
+                                                    </h6>
+                                                </div>
+                                                <div class="card-body pt-0">
+                                                    <div class="row g-3 text-center">
+                                                        <div class="col-6 col-md-3">
+                                                            <div class="p-2 border rounded bg-light">
+                                                                <small class="text-muted d-block small">Voltaje Arco Piloto</small>
+                                                                <span class="fw-bold fs-6 text-dark" id="modal-volarc">0</span> <small
+                                                                class="text-muted">V</small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-md-3">
+                                                            <div class="p-2 border rounded bg-light">
+                                                                <small class="text-muted d-block small">Voltaje Principal</small>
+                                                                <span class="fw-bold fs-6 text-dark" id="modal-volpri">0</span> <small
+                                                                class="text-muted">V</small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-md-3">
+                                                            <div class="p-2 border rounded bg-light">
+                                                                <small class="text-muted d-block small">Corriente Soldadura</small>
+                                                                <span class="fw-bold fs-6 text-primary" id="modal-corriente">0</span> <small
+                                                                class="text-muted">A</small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-md-3">
+                                                            <div class="p-2 border rounded bg-light">
+                                                                <small class="text-muted d-block small">Energía Disipada</small>
+                                                                <span class="fw-bold fs-6 text-dark" id="modal-energia">0</span> <small
+                                                                class="text-muted">J</small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-md-3">
+                                                            <div class="p-2 border rounded bg-light">
+                                                                <small class="text-muted d-block small">Tiempo de Arco</small>
+                                                                <span class="fw-bold fs-6 text-dark" id="modal-tiempo">0</span> <small
+                                                                class="text-muted">ms</small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-md-3">
+                                                            <div class="p-2 border rounded bg-light">
+                                                                <small class="text-muted d-block small">Penetración Perno</small>
+                                                                <span class="fw-bold fs-6 text-dark" id="modal-penetracion">0</span> <small
+                                                                class="text-muted">mm</small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-md-3">
+                                                            <div class="p-2 border rounded bg-light">
+                                                                <small class="text-muted d-block small">Elevación Pistola</small>
+                                                                <span class="fw-bold fs-6 text-dark" id="modal-elevacion">0</span> <small
+                                                                class="text-muted">mm</small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 col-md-3">
+                                                            <div class="p-2 border rounded bg-light">
+                                                                <small class="text-muted d-block small">Longitud Perno</small>
+                                                                <span class="fw-bold fs-6 text-dark" id="modal-lonper">0</span> <small
+                                                                class="text-muted">mm</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="card border-0 shadow-sm">
+                                                <div class="card-header bg-white border-0 py-3">
+                                                    <h6 class="fw-bold mb-0 text-dark">
+                                                        <i class="bi bi-shield-check text-success me-2"></i>Diagnóstico de Controlador Tucker
+                                                    </h6>
+                                                </div>
+                                                <div class="card-body pt-0">
+                                                    <div class="row g-3">
+                                                        <div class="col-md-4">
+                                                            <div
+                                                                class="d-flex justify-content-between align-items-center p-2 border rounded bg-white">
+                                                                <span class="small text-muted">Código Error:</span>
+                                                                <span class="badge bg-secondary" id="modal-err">Err: 0</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div
+                                                                class="d-flex justify-content-between align-items-center p-2 border rounded bg-white">
+                                                                <span class="small text-muted">Alarma Sistema:</span>
+                                                                <span class="badge bg-secondary" id="modal-alarma">Alarma: 0</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <div
+                                                                class="d-flex justify-content-between align-items-center p-2 border rounded bg-white">
+                                                                <span class="small text-muted">Modo Operación:</span>
+                                                                <span class="badge bg-info text-dark" id="modal-modo">Auto (1)</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="alert alert-danger shadow-sm mt-3 mb-0 d-none" id="modal-alert-desviaciones">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
+                                                            <div>
+                                                                <strong class="d-block">Desviación Fuera de Tolerancia Detectada:</strong>
+                                                                <span id="modal-detalles-fallas" class="font-monospace small"></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="modal-footer bg-white border-0 py-2">
+                                            <button type="button" class="btn btn-sm btn-secondary fw-bold px-4" data-bs-dismiss="modal">
+                                                <i class="bi bi-x-lg me-1"></i>Cerrar
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <div class="modal-footer bg-white border-0 py-2">
-                <button type="button" class="btn btn-sm btn-secondary fw-bold px-4" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i>Cerrar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="~/js/dashboard.js" asp-append-version="true"></script>
-}
+                            @section Scripts {
+                                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+                                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                                <script src="~/js/dashboard.js" asp-append-version="true"></script>
+                            }

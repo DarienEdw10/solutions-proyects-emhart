@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Enhartt.MVC")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c0ce49cc84956872057ddae6fb322fa4650cf2e2")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c3e4b1904846fee80bf4b6890768936469afaab9")]
 [assembly: System.Reflection.AssemblyProductAttribute("Enhartt.MVC")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Enhartt.MVC")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

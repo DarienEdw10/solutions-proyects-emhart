@@ -156,3 +156,15 @@ C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-P
 C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion\Enhartt.MVC.deps.json
 C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion\Enhartt.MVC.runtimeconfig.json
 C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion\Enhartt.MVC.staticwebassets.endpoints.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion2\Enhartt.MVC-Publicacion\web.config
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion2\web.config
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion2\appsettings.Development.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion2\appsettings.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion2\Enhartt.MVC-Publicacion\appsettings.Development.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion2\Enhartt.MVC-Publicacion\appsettings.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion2\Enhartt.MVC-Publicacion\Enhartt.MVC.deps.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion2\Enhartt.MVC-Publicacion\Enhartt.MVC.runtimeconfig.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion2\Enhartt.MVC-Publicacion\Enhartt.MVC.staticwebassets.endpoints.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion2\Enhartt.MVC.deps.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion2\Enhartt.MVC.runtimeconfig.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.MVC\bin\Release\net8.0\Enhartt.MVC-Publicacion2\Enhartt.MVC.staticwebassets.endpoints.json
