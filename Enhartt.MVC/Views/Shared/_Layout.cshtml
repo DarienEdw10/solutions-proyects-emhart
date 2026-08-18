@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+﻿@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@inject Magna.Cosma.Autotek.VIPTRA.Foreign.RepositorioEmpleados RepositorioEmpleados
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -10,11 +12,75 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <!-- Estilos Locales -->
     <link rel="stylesheet" href="~/css/style.css" asp-append-version="true" />
 </head>
 
 <body class="bg-light">
+
+    @{
+        // 1. Obtener usuario de red autenticado
+        string nombreCompleto = User?.Identity?.Name ?? "";
+        string nombreUsuario = nombreCompleto;
+        if (nombreUsuario.Contains('\\'))
+        {
+            nombreUsuario = nombreUsuario.Split('\\')[1];
+        }
+
+        // Respaldo local de desarrollo si el navegador no envía el header NTLM
+        bool usuarioAutenticado = User?.Identity?.IsAuthenticated == true;
+        if (string.IsNullOrEmpty(nombreUsuario))
+        {
+            nombreUsuario = Environment.UserName;
+            nombreCompleto = $"MAGNA\\{nombreUsuario}";
+            usuarioAutenticado = true;
+        }
+
+        // 2. Consulta en base de datos corporativa de Magna (VIPTRA)
+        bool empleadoActivo = false;
+        try
+        {
+            var emp = RepositorioEmpleados.ObtenerEmpleadoPorCWID(nombreUsuario);
+            if (emp != null && emp.Activo)
+            {
+                empleadoActivo = true;
+            }
+        }
+        catch
+        {
+            empleadoActivo = false;
+        }
+
+        // 3. Listas y roles desde appsettings.json
+        var usuariosSistemas = Configuration.GetSection("PermisosSettings:Sistemas:Usuarios").Get<List<string>>() 
+                               ?? Configuration.GetSection("SuperadminSettings:UsuariosAutorizados").Get<List<string>>() 
+                               ?? new();
+        var rolesSistemas = Configuration.GetSection("PermisosSettings:Sistemas:Roles").Get<List<string>>() 
+                            ?? Configuration.GetSection("SuperadminSettings:RolesAutorizados").Get<List<string>>() 
+                            ?? new();
+
+        var usuariosCalidad = Configuration.GetSection("PermisosSettings:CalidadSupervisores:Usuarios").Get<List<string>>() ?? new();
+        var rolesCalidad = Configuration.GetSection("PermisosSettings:CalidadSupervisores:Roles").Get<List<string>>() ?? new();
+
+        // 4. Evaluación de Nivel Sistemas (Superadmin)
+        bool esSistemas = usuariosSistemas.Any(u => u.Equals(nombreUsuario, StringComparison.OrdinalIgnoreCase));
+        if (!esSistemas && User != null)
+        {
+            try { esSistemas = rolesSistemas.Any(r => User.IsInRole(r)); } catch { esSistemas = false; }
+        }
+
+        // 5. Evaluación de Nivel Calidad / Supervisores
+        bool esCalidadOSupervisor = usuariosCalidad.Any(u => u.Equals(nombreUsuario, StringComparison.OrdinalIgnoreCase));
+        if (!esCalidadOSupervisor && User != null)
+        {
+            try { esCalidadOSupervisor = rolesCalidad.Any(r => User.IsInRole(r)); } catch { esCalidadOSupervisor = false; }
+        }
+
+        // Sistemas hereda los permisos de Recetas, o bien cualquier empleado activo de Calidad/Sistemas
+        bool puedeVerRecetas = esSistemas || esCalidadOSupervisor || empleadoActivo;
+    }
 
     <!-- Navbar Reutilizable -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -31,11 +97,11 @@
                 <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
                     
                     <!-- Indicador de Usuario Autenticado / Sesión Windows -->
-                    @if (User?.Identity?.IsAuthenticated == true)
+                    @if (usuarioAutenticado)
                     {
-                        <span class="badge bg-light text-dark border py-2 px-3 d-flex align-items-center" title="Usuario Autenticado por Windows">
+                        <span class="badge bg-light text-dark border py-2 px-3 d-flex align-items-center" title="Usuario Autenticado">
                             <i class="bi bi-person-circle text-primary me-1 fs-6"></i>
-                            <span class="font-monospace fw-bold">@User.Identity.Name</span>
+                            <span class="font-monospace fw-bold">@nombreCompleto</span>
                         </span>
                     }
                     else
@@ -49,23 +115,34 @@
                         <i class="bi bi-wifi me-1"></i>ONLINE
                     </span>
 
-                    <!-- Botón Dashboard Principal -->
+                    <!-- 1. NIVEL GENERAL: Visible para todos -->
                     <a asp-controller="Home" asp-action="Index" 
                        class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")">
                         <i class="bi bi-speedometer2 me-1"></i>Principal
                     </a>
 
-                    <!-- Botón Gestión de Recetas -->
-                    <a asp-controller="Recetas" asp-action="Index" 
-                       class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Recetas" ? "active" : "")">
-                        <i class="bi bi-sliders me-1"></i>Recetas
-                    </a>
+                    <!-- 2. NIVEL CALIDAD / SUPERVISOR / SISTEMAS: Recetas y Altas -->
+                    @if (puedeVerRecetas)
+                    {
+                        <a asp-controller="Recetas" asp-action="Index" 
+                           class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Recetas" ? "active" : "")">
+                            <i class="bi bi-sliders me-1"></i>Recetas
+                        </a>
 
-                    <!-- Botón Altas de Celdas y Salidas -->
-                    <a asp-controller="Recetas" asp-action="AltasRecetas" 
-                       class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "AltasRecetas" ? "active" : "")">
-                        <i class="bi bi-plus-square-fill me-1"></i>Altas Recetas
-                    </a>
+                        <a asp-controller="Recetas" asp-action="AltasRecetas" 
+                           class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "AltasRecetas" ? "active" : "")">
+                            <i class="bi bi-plus-square-fill me-1"></i>Altas Recetas
+                        </a>
+                    }
+
+                    <!-- 3. NIVEL EXCLUSIVO SISTEMAS: Logs de Servidor -->
+                    @if (esSistemas)
+                    {
+                        <a asp-controller="Logs" asp-action="Index" 
+                           class="btn btn-outline-warning btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Logs" ? "active" : "")">
+                            <i class="bi bi-terminal-fill me-1"></i>Logs
+                        </a>
+                    }
                 </div>
             </div>
         </div>
@@ -77,6 +154,7 @@
     </div>
 
     <!-- Librerías de Scripts compartidas -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>

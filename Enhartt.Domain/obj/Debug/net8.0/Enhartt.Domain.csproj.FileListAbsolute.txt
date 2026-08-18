@@ -11,3 +11,5 @@ C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\refint\Enhar
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.pdb
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\ref\Enhartt.Domain.dll
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.csproj.AssemblyReference.cache
+C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\bin\Debug\net8.0\Autotek.Log.dll
+C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt..611FE12F.Up2Date

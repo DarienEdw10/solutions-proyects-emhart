@@ -5,7 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-<ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -13,10 +14,23 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Enhartt.Domain\Enhartt.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Magna.Cosma.Autotek.Log">
+      <HintPath>..\Libs\Autotek.Log.dll</HintPath>
+    </Reference>
+    <Reference Include="Magna.Cosma.Autotek.Autentificacion">
+      <HintPath>..\Libs\Autotek.Autentificacion.Library.dll</HintPath>
+    </Reference>
+    <Reference Include="Magna.Cosma.Autotek.Conexion">
+      <HintPath>..\Libs\Autotek.Conexion.Library.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

@@ -140,10 +140,3 @@ C:\Users\darijim1\Documents\enhartt\Enhartt.Api\obj\Debug\net8.0\refint\Enhartt.
 C:\Users\darijim1\Documents\enhartt\Enhartt.Api\obj\Debug\net8.0\Enhartt.Api.pdb
 C:\Users\darijim1\Documents\enhartt\Enhartt.Api\obj\Debug\net8.0\Enhartt.Api.genruntimeconfig.cache
 C:\Users\darijim1\Documents\enhartt\Enhartt.Api\obj\Debug\net8.0\ref\Enhartt.Api.dll
-C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Microsoft.Extensions.Caching.Memory.dll
-C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.dll
-C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
-C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Microsoft.Extensions.Logging.dll
-C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
-C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\Microsoft.Extensions.Options.dll
-C:\Users\darijim1\Documents\enhartt\Enhartt.Api\bin\Debug\net8.0\System.ClientModel.dll

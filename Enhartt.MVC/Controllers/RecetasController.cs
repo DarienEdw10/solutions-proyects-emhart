@@ -1,6 +1,7 @@
+using Enhartt.Domain.Repositories;
 using Enhartt.MVC.Models.ViewModels;
 using Enhartt.MVC.Services;
-using Enhartt.Domain.Repositories;
+using Magna.Cosma.Autotek.VIPTRA.Foreign;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,40 +10,100 @@ namespace Enhartt.MVC.Controllers;
 [Authorize]
 public class RecetasController : Controller
 {
-    private readonly EnharttService enharttService;
-    private readonly IRepository repository;
+    private readonly EnharttService _enharttService;
+    private readonly IRepository _repository;
+    private readonly IConfiguration _configuration;
+    private readonly RepositorioEmpleados _repositorioEmpleados;
 
-    public RecetasController(EnharttService enharttService, IRepository repository)
+    public RecetasController(
+        EnharttService enharttService, 
+        IRepository repository, 
+        IConfiguration configuration,
+        RepositorioEmpleados repositorioEmpleados)
     {
-        this.enharttService = enharttService;
-        this.repository = repository;
+        _enharttService = enharttService;
+        _repository = repository;
+        _configuration = configuration;
+        _repositorioEmpleados = repositorioEmpleados;
+    }
+
+    private bool TienePermisoRecetas()
+    {
+        if (User?.Identity?.IsAuthenticated != true) return false;
+
+        string cwid = User.Identity?.Name ?? "";
+        if (cwid.Contains('\\'))
+        {
+            cwid = cwid.Split('\\')[1];
+        }
+
+        if (string.IsNullOrEmpty(cwid))
+        {
+            cwid = Environment.UserName;
+        }
+
+        // 1. Consulta corporativa en BD de Magna Autotek mediante RepositorioEmpleados
+        try
+        {
+            var empleado = _repositorioEmpleados.ObtenerEmpleadoPorCWID(cwid);
+            if (empleado != null && empleado.Activo)
+            {
+                return true;
+            }
+        }
+        catch
+        {
+            // Respaldo en caso de desconexión momentánea de la BD de nómina/empleados
+        }
+
+        // 2. Validación de respaldo por listas en appsettings.json
+        var sistemasUsers = _configuration.GetSection("PermisosSettings:Sistemas:Usuarios").Get<List<string>>() ?? new();
+        var calidadUsers = _configuration.GetSection("PermisosSettings:CalidadSupervisores:Usuarios").Get<List<string>>() ?? new();
+
+        if (sistemasUsers.Concat(calidadUsers).Any(u => u.Equals(cwid, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // 3. Validación por rol de Windows protegida
+        try
+        {
+            var sistemasRoles = _configuration.GetSection("PermisosSettings:Sistemas:Roles").Get<List<string>>() ?? new();
+            var calidadRoles = _configuration.GetSection("PermisosSettings:CalidadSupervisores:Roles").Get<List<string>>() ?? new();
+            return sistemasRoles.Concat(calidadRoles).Any(r => User.IsInRole(r));
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     [HttpGet]
     public async Task<IActionResult> Index()
     {
+        if (!TienePermisoRecetas()) return Forbid();
         return await CargarVistaRecetasAsync("recetas");
     }
 
     [HttpGet]
     public async Task<IActionResult> Recetas()
     {
+        if (!TienePermisoRecetas()) return Forbid();
         return await CargarVistaRecetasAsync("recetas");
     }
 
     [HttpGet]
     public async Task<IActionResult> AltasRecetas()
     {
+        if (!TienePermisoRecetas()) return Forbid();
         return await CargarVistaRecetasAsync("AltasRecetas");
     }
 
     private async Task<IActionResult> CargarVistaRecetasAsync(string vistaNombre)
     {
-        // 1. Obtener máquinas y recetas activas en solo 2 consultas
-        var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
-        var todasLasRecetas = await repository.ObtenerTodasLasRecetasActivasAsync() ?? [];
+        var maquinas = await _enharttService.ObtenerMaquinasAsync() ?? [];
+        var todasLasRecetas = await _repository.ObtenerTodasLasRecetasActivasAsync() ?? [];
 
-        // 2. Mapeo en memoria (O(1) lookup)
         var recetasPorMaquina = todasLasRecetas
             .GroupBy(r => r.IdMaquina)
             .ToDictionary(grp => grp.Key, grp => grp.ToList());
@@ -78,6 +139,8 @@ public class RecetasController : Controller
     [HttpPost]
     public async Task<IActionResult> Guardar([FromBody] GuardarRecetaDto dto)
     {
+        if (!TienePermisoRecetas()) return Forbid();
+
         if (dto == null || dto.Parametros.Count == 0)
         {
             return BadRequest(new { success = false, message = "No se recibieron parámetros válidos para guardar." });
@@ -107,8 +170,7 @@ public class RecetasController : Controller
                     Comentario = motivo
                 };
 
-                // Desactiva la versión anterior e inserta la nueva como ACTIVA
-                await repository.ActualizarRecetaConHistorialAsync(nuevaReceta, usuario);
+                await _repository.ActualizarRecetaConHistorialAsync(nuevaReceta, usuario);
             }
 
             return Json(new { success = true, message = "Los límites y el motivo de cambio fueron registrados exitosamente." });
@@ -122,10 +184,12 @@ public class RecetasController : Controller
     [HttpGet]
     public async Task<IActionResult> ObtenerAuditoria(int? idMaquina, string? salida, DateTime? fechaInicio, DateTime? fechaFin)
     {
+        if (!TienePermisoRecetas()) return Forbid();
+
         try
         {
-            var maquinas = await enharttService.ObtenerMaquinasAsync() ?? [];
-            var historial = await repository.ObtenerAuditoriaRecetasAsync(idMaquina, salida, fechaInicio, fechaFin);
+            var maquinas = await _enharttService.ObtenerMaquinasAsync() ?? [];
+            var historial = await _repository.ObtenerAuditoriaRecetasAsync(idMaquina, salida, fechaInicio, fechaFin);
 
             var resultadoDto = historial.Select(h => new
             {
@@ -151,6 +215,8 @@ public class RecetasController : Controller
     [HttpPost]
     public async Task<IActionResult> AgregarSalida([FromBody] AgregarSalidaDto dto)
     {
+        if (!TienePermisoRecetas()) return Forbid();
+
         if (dto == null || dto.IdMaquina <= 0 || dto.NumeroSalida <= 0)
         {
             return BadRequest(new { success = false, message = "Datos de máquina o salida no válidos." });
@@ -159,7 +225,7 @@ public class RecetasController : Controller
         try
         {
             string usuario = User?.Identity?.Name ?? "Usuario_Web";
-            var recetasExistentes = await repository.ObtenerRecetasPorMaquinaAsync(dto.IdMaquina) ?? [];
+            var recetasExistentes = await _repository.ObtenerRecetasPorMaquinaAsync(dto.IdMaquina) ?? [];
 
             string[] parametrosBase = new string[] { "VolArc", "VolPri", "Corriente", "Tiempo", "Penetracion", "Energia" };
 
@@ -184,7 +250,7 @@ public class RecetasController : Controller
                     Comentario = "Alta de nueva salida"
                 };
 
-                await repository.AgregarRecetaAsync(nuevaReceta, usuario);
+                await _repository.AgregarRecetaAsync(nuevaReceta, usuario);
             }
 
             return Json(new { success = true, message = $"Salida {dto.NumeroSalida} agregada e inicializada correctamente." });
@@ -198,6 +264,8 @@ public class RecetasController : Controller
     [HttpPost]
     public async Task<IActionResult> AgregarCelda([FromBody] AgregarCeldaDto dto)
     {
+        if (!TienePermisoRecetas()) return Forbid();
+
         if (dto == null || string.IsNullOrWhiteSpace(dto.NombreCelda) || string.IsNullOrWhiteSpace(dto.IdMaquina))
         {
             return BadRequest(new { success = false, message = "El nombre de la celda y el ID de máquina son obligatorios." });
@@ -218,7 +286,7 @@ public class RecetasController : Controller
                 FechaCreacion = DateTime.Now
             };
 
-            var maquinaCreada = await repository.AgregarMaquinaAsync(nuevaMaquina);
+            var maquinaCreada = await _repository.AgregarMaquinaAsync(nuevaMaquina);
 
             if (maquinaCreada == null)
             {
@@ -242,7 +310,7 @@ public class RecetasController : Controller
                     Comentario = "Alta de celda inicial"
                 };
 
-                await repository.AgregarRecetaAsync(recetaInicial, usuario);
+                await _repository.AgregarRecetaAsync(recetaInicial, usuario);
             }
 
             return Json(new { success = true, message = $"Celda '{nuevaMaquina.Celda}' creada exitosamente inicializada en la Salida {salidaInicial}." });
