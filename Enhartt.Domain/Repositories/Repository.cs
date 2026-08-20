@@ -12,6 +12,21 @@ namespace Enhartt.Domain.Repositories
         {
             _context = context;
         }
+        public async Task<int> ObtenerNivelUsuarioPorCWIDAsync(string cwid)
+        {
+            if (string.IsNullOrWhiteSpace(cwid)) return 0;
+
+            if (cwid.Contains('\\'))
+            {
+                cwid = cwid.Split('\\')[1];
+            }
+
+            var usuario = await _context.Usuarios
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.CWID.ToLower() == cwid.ToLower() && u.Activo);
+
+            return usuario?.NivelDeUsuario ?? 0;
+        }
 
         // =============================================================
         // RECETAS

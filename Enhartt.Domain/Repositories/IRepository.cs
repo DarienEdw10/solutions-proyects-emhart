@@ -18,7 +18,7 @@ namespace Enhartt.Domain.Repositories
             string? salida,
             DateTime? fechaInicio,
             DateTime? fechaFin);
-
+        Task<int> ObtenerNivelUsuarioPorCWIDAsync(string cwid);
         // -------------------------------------------------------------
         // MÓDULO MAQUINAS (Catálogo Celdas Tucker)
         // -------------------------------------------------------------

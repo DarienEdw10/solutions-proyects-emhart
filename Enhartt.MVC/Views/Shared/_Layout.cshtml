@@ -1,5 +1,6 @@
 ﻿@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
-@inject Magna.Cosma.Autotek.VIPTRA.Foreign.RepositorioEmpleados RepositorioEmpleados
+@inject Enhartt.Domain.Repositories.IRepository Repository
+
 <!DOCTYPE html>
 <html lang="es">
 
@@ -38,48 +39,53 @@
             usuarioAutenticado = true;
         }
 
-        // 2. Consulta en base de datos corporativa de Magna (VIPTRA)
-        bool empleadoActivo = false;
+        // 2. Consulta directa en la BD local emhart.usuarios
+        int nivelUsuario = 0;
         try
         {
-            var emp = RepositorioEmpleados.ObtenerEmpleadoPorCWID(nombreUsuario);
-            if (emp != null && emp.Activo)
-            {
-                empleadoActivo = true;
-            }
+            nivelUsuario = await Repository.ObtenerNivelUsuarioPorCWIDAsync(nombreUsuario);
         }
         catch
         {
-            empleadoActivo = false;
+            nivelUsuario = 0;
         }
 
-        // 3. Listas y roles desde appsettings.json
-        var usuariosSistemas = Configuration.GetSection("PermisosSettings:Sistemas:Usuarios").Get<List<string>>() 
-                               ?? Configuration.GetSection("SuperadminSettings:UsuariosAutorizados").Get<List<string>>() 
-                               ?? new();
-        var rolesSistemas = Configuration.GetSection("PermisosSettings:Sistemas:Roles").Get<List<string>>() 
-                            ?? Configuration.GetSection("SuperadminSettings:RolesAutorizados").Get<List<string>>() 
-                            ?? new();
+        bool esSistemas = (nivelUsuario >= 30);
+        bool esCalidadOSupervisor = (nivelUsuario >= 20);
 
-        var usuariosCalidad = Configuration.GetSection("PermisosSettings:CalidadSupervisores:Usuarios").Get<List<string>>() ?? new();
-        var rolesCalidad = Configuration.GetSection("PermisosSettings:CalidadSupervisores:Roles").Get<List<string>>() ?? new();
-
-        // 4. Evaluación de Nivel Sistemas (Superadmin)
-        bool esSistemas = usuariosSistemas.Any(u => u.Equals(nombreUsuario, StringComparison.OrdinalIgnoreCase));
-        if (!esSistemas && User != null)
+        // 3. Fallbacks estáticos SOLO si no existe en emhart.usuarios
+        if (nivelUsuario == 0)
         {
-            try { esSistemas = rolesSistemas.Any(r => User.IsInRole(r)); } catch { esSistemas = false; }
+            var usuariosSistemas = Configuration.GetSection("PermisosSettings:Sistemas:Usuarios").Get<List<string>>()
+                                   ?? Configuration.GetSection("SuperadminSettings:UsuariosAutorizados").Get<List<string>>()
+                                   ?? new();
+            var rolesSistemas = Configuration.GetSection("PermisosSettings:Sistemas:Roles").Get<List<string>>()
+                                ?? Configuration.GetSection("SuperadminSettings:RolesAutorizados").Get<List<string>>()
+                                ?? new();
+
+            var usuariosCalidad = Configuration.GetSection("PermisosSettings:CalidadSupervisores:Usuarios").Get<List<string>>()
+                                ?? new();
+            var rolesCalidad = Configuration.GetSection("PermisosSettings:CalidadSupervisores:Roles").Get<List<string>>() 
+                                ?? new();
+
+            esSistemas = usuariosSistemas.Any(u => u.Equals(nombreUsuario, StringComparison.OrdinalIgnoreCase));
+            if (!esSistemas && User != null)
+            {
+                try { esSistemas = rolesSistemas.Any(r => User.IsInRole(r)); } catch { esSistemas = false; }
+            }
+
+            esCalidadOSupervisor = usuariosCalidad.Any(u => u.Equals(nombreUsuario, StringComparison.OrdinalIgnoreCase));
+            if (!esCalidadOSupervisor && User != null)
+            {
+                try { esCalidadOSupervisor = rolesCalidad.Any(r => User.IsInRole(r)); } catch { esCalidadOSupervisor = false; }
+            }
+
+            if (esSistemas) nivelUsuario = 30;
+            else if (esCalidadOSupervisor) nivelUsuario = 20;
+            else nivelUsuario = 0; // Permanece en 0 para usuarios inactivos o no registrados
         }
 
-        // 5. Evaluación de Nivel Calidad / Supervisores
-        bool esCalidadOSupervisor = usuariosCalidad.Any(u => u.Equals(nombreUsuario, StringComparison.OrdinalIgnoreCase));
-        if (!esCalidadOSupervisor && User != null)
-        {
-            try { esCalidadOSupervisor = rolesCalidad.Any(r => User.IsInRole(r)); } catch { esCalidadOSupervisor = false; }
-        }
-
-        // Sistemas hereda los permisos de Recetas, o bien cualquier empleado activo de Calidad/Sistemas
-        bool puedeVerRecetas = esSistemas || esCalidadOSupervisor || empleadoActivo;
+        bool puedeVerRecetas = nivelUsuario >= 20;
     }
 
     <!-- Navbar Reutilizable -->
@@ -95,50 +101,58 @@
             </button>
             <div class="collapse navbar-collapse mt-2 mt-lg-0" id="navbarContent">
                 <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
-                    
+
                     <!-- Indicador de Usuario Autenticado / Sesión Windows -->
                     @if (usuarioAutenticado)
                     {
-                        <span class="badge bg-light text-dark border py-2 px-3 d-flex align-items-center" title="Usuario Autenticado">
+                        <span class="badge bg-light text-dark border py-2 px-3 d-flex align-items-center"
+                              title="CWID: @nombreUsuario">
                             <i class="bi bi-person-circle text-primary me-1 fs-6"></i>
                             <span class="font-monospace fw-bold">@nombreCompleto</span>
-                        </span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-secondary py-2 px-3">
-                            <i class="bi bi-person-fill me-1"></i>Invitado
+
+                            @if (nivelUsuario >= 30)
+                            {
+                                <span class="badge bg-danger ms-2">Nivel 30</span>
+                            }
+                            else if (nivelUsuario >= 20)
+                            {
+                                <span class="badge bg-primary ms-2">Nivel 20</span>
+                            }
+                            else if (nivelUsuario >= 10)
+                            {
+                                <span class="badge bg-info text-dark ms-2">Nivel 10</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary ms-2">Inactivo</span>
+                            }
                         </span>
                     }
 
-                    <span class="badge bg-success py-2 px-3">
-                        <i class="bi bi-wifi me-1"></i>ONLINE
-                    </span>
-
-                    <!-- 1. NIVEL GENERAL: Visible para todos -->
-                    <a asp-controller="Home" asp-action="Index" 
+                    <!-- 1. NIVEL GENERAL (Nivel >= 10): Visible para todos -->
+                    <a asp-controller="Home" asp-action="Index"
                        class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")">
                         <i class="bi bi-speedometer2 me-1"></i>Principal
                     </a>
 
-                    <!-- 2. NIVEL CALIDAD / SUPERVISOR / SISTEMAS: Recetas y Altas -->
+                    <!-- 2. NIVEL CALIDAD / SUPERVISOR / SISTEMAS (Nivel >= 20): Recetas y Altas -->
                     @if (puedeVerRecetas)
                     {
-                        <a asp-controller="Recetas" asp-action="Index" 
+                        <a asp-controller="Recetas" asp-action="Index"
                            class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Recetas" ? "active" : "")">
                             <i class="bi bi-sliders me-1"></i>Recetas
                         </a>
 
-                        <a asp-controller="Recetas" asp-action="AltasRecetas" 
+                        <a asp-controller="Recetas" asp-action="AltasRecetas"
                            class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "AltasRecetas" ? "active" : "")">
                             <i class="bi bi-plus-square-fill me-1"></i>Altas Recetas
                         </a>
                     }
 
-                    <!-- 3. NIVEL EXCLUSIVO SISTEMAS: Logs de Servidor -->
+                    <!-- 3. NIVEL EXCLUSIVO SISTEMAS (Nivel >= 30): Logs de Servidor -->
                     @if (esSistemas)
                     {
-                        <a asp-controller="Logs" asp-action="Index" 
+                        <a asp-controller="Logs" asp-action="Index"
                            class="btn btn-outline-warning btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Logs" ? "active" : "")">
                             <i class="bi bi-terminal-fill me-1"></i>Logs
                         </a>

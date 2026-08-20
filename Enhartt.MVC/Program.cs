@@ -21,17 +21,15 @@ if (!Directory.Exists(directorioLogs))
     Directory.CreateDirectory(directorioLogs);
 }
 
-logSettings.ArchivoDeLog = Path.Combine(directorioLogs, logSettings.ArchivoDeLog);
+// Configuración del archivo físico de Logs
+string nombreArchivoLog = string.IsNullOrWhiteSpace(logSettings.ArchivoDeLog) 
+    ? "TuckerMonitor-00.log" 
+    : logSettings.ArchivoDeLog;
+
+logSettings.ArchivoDeLog = Path.Combine(directorioLogs, Path.GetFileName(nombreArchivoLog));
 Logger logger = new(logSettings);
 
-// Log de arranque de la aplicación
-logger.Registrar(
-    nivel: Logger.NivelesLog.Detallado,
-    tipo: Logger.TiposLog.Informativo,
-    origen: "Program.cs",
-    texto: "Inicio del servicio web [Magna.Cosma.Autotek.TuckerMonitor]");
-
-// Inyección del logger corporativo
+// Inyección del logger corporativo como Singleton
 builder.Services.AddSingleton(logger);
 
 // =============================================================
@@ -40,20 +38,27 @@ builder.Services.AddSingleton(logger);
 SettingsAutentificacion settingsAutentificacion = new();
 builder.Configuration.GetSection("SettingsAutentificacion").Bind(settingsAutentificacion);
 
-// Inyección del Repositorio de Empleados mediante ActivatorUtilities
-builder.Services.AddScoped(service => ActivatorUtilities.CreateInstance<RepositorioEmpleados>(
-    service,
-    settingsAutentificacion,
-    logger
-));
+// Inyección segura: Se instancia solo si una clase la solicita explícitamente
+builder.Services.AddScoped<RepositorioEmpleados>(sp => 
+    new RepositorioEmpleados(settingsAutentificacion, logger));
 
 // =============================================================
-// 3. INYECCIÓN DE DEPENDENCIAS MVC Y BASE DE DATOS
+// 3. INYECCIÓN DE DEPENDENCIAS MVC Y BASE DE DATOS OPTIMIZADA
 // =============================================================
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(
-    builder.Configuration.GetConnectionString("DefaultConnection")));
+// Configuración de DbContext con control de reconexión y timeouts
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), sqlOptions =>
+    {
+        sqlOptions.CommandTimeout(5); // Máximo 5 segundos de espera por consulta
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 2,
+            maxRetryDelay: TimeSpan.FromSeconds(2),
+            errorNumbersToAdd: null);
+    });
+});
 
 builder.Services.AddScoped<IRepository, Repository>();
 builder.Services.AddScoped<EnharttService>();

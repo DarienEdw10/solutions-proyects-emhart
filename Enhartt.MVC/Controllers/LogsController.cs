@@ -1,3 +1,4 @@
+using Enhartt.Domain.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,14 +9,16 @@ namespace Enhartt.MVC.Controllers
     {
         private readonly string _directorioLogs;
         private readonly IConfiguration _configuration;
+        private readonly IRepository _repository;
 
-        public LogsController(IConfiguration configuration)
+        public LogsController(IConfiguration configuration, IRepository repository)
         {
             _configuration = configuration;
+            _repository = repository;
             _directorioLogs = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
         }
 
-        private bool EsSuperadmin()
+        private async Task<bool> EsSuperadminAsync()
         {
             // 1. Obtener usuario de red
             string nombreUsuario = User?.Identity?.Name ?? "";
@@ -24,13 +27,23 @@ namespace Enhartt.MVC.Controllers
                 nombreUsuario = nombreUsuario.Split('\\')[1];
             }
 
-            // Respaldo local si no llega por handshake
             if (string.IsNullOrEmpty(nombreUsuario))
             {
                 nombreUsuario = Environment.UserName;
             }
 
-            // 2. Leer configuración desde PermisosSettings:Sistemas (o SuperadminSettings como fallback)
+            // 2. Consulta en base de datos emhart.usuarios (Nivel >= 30)
+            try
+            {
+                int nivelUsuario = await _repository.ObtenerNivelUsuarioPorCWIDAsync(nombreUsuario);
+                if (nivelUsuario >= 30)
+                {
+                    return true;
+                }
+            }
+            catch { }
+
+            // 3. Fallback en appsettings.json
             var usuarios = _configuration.GetSection("PermisosSettings:Sistemas:Usuarios").Get<List<string>>()
                            ?? _configuration.GetSection("SuperadminSettings:UsuariosAutorizados").Get<List<string>>()
                            ?? new();
@@ -40,14 +53,14 @@ namespace Enhartt.MVC.Controllers
                 return true;
             }
 
-            // 3. Validación por roles de Windows protegida
+            // 4. Validación por roles de Windows protegida
             try
             {
                 var roles = _configuration.GetSection("PermisosSettings:Sistemas:Roles").Get<List<string>>()
                             ?? _configuration.GetSection("SuperadminSettings:RolesAutorizados").Get<List<string>>()
                             ?? new();
 
-                return roles.Any(r => User.IsInRole(r));
+                return roles.Any(r => User?.IsInRole(r) == true);
             }
             catch
             {
@@ -55,9 +68,9 @@ namespace Enhartt.MVC.Controllers
             }
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            if (!EsSuperadmin())
+            if (!await EsSuperadminAsync())
             {
                 return Forbid();
             }
@@ -85,7 +98,7 @@ namespace Enhartt.MVC.Controllers
         [HttpGet]
         public async Task<IActionResult> LeerContenidoLog(string archivo)
         {
-            if (!EsSuperadmin()) return Forbid();
+            if (!await EsSuperadminAsync()) return Forbid();
 
             try
             {
@@ -109,9 +122,9 @@ namespace Enhartt.MVC.Controllers
         }
 
         [HttpGet]
-        public IActionResult Descargar(string archivo)
+        public async Task<IActionResult> Descargar(string archivo)
         {
-            if (!EsSuperadmin()) return Forbid();
+            if (!await EsSuperadminAsync()) return Forbid();
 
             if (string.IsNullOrEmpty(archivo) || archivo.Contains(".."))
                 return BadRequest("Nombre de archivo no permitido.");
@@ -119,7 +132,7 @@ namespace Enhartt.MVC.Controllers
             var ruta = Path.Combine(_directorioLogs, archivo);
             if (!System.IO.File.Exists(ruta)) return NotFound();
 
-            var bytes = System.IO.File.ReadAllBytes(ruta);
+            var bytes = await System.IO.File.ReadAllBytesAsync(ruta);
             return File(bytes, "text/plain", archivo);
         }
     }
