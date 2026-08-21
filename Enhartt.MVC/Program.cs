@@ -87,7 +87,27 @@ if (!app.Environment.IsDevelopment())
 app.UseStaticFiles();
 
 app.UseRouting();
+// =============================================================
+// MOCK DE IDENTIDAD PARA PRUEBAS (Hardcode temporal)
+// =============================================================
+/*app.Use(async (context, next) =>
+{
+    // Cambia el CWID aquí para probar distintos escenarios:
+    // Ejemplos: "operador_prueba", "usuario_consulta", o un CWID de un operador
+    string cwidSimulado = "darienedwin.jimenez"; // Cambia este valor según el usuario que quieras simular
+//yaracer1
+    var claims = new[]
+    {
+        new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, cwidSimulado),
+        new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, cwidSimulado)
+    };
 
+    var identity = new System.Security.Claims.ClaimsIdentity(claims, "PruebaMock");
+    context.User = new System.Security.Claims.ClaimsPrincipal(identity);
+
+    await next();
+});
+*/
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -104,6 +124,7 @@ app.Use(async (context, next) =>
     if (esRutaVista && !esLlamadaApiOEstatal && context.User?.Identity?.IsAuthenticated == true)
     {
         string cwid = context.User.Identity.Name ?? "Desconocido";
+       // cwid = "david.galvan";
         var log = context.RequestServices.GetService<Logger>();
         
         log?.Registrar(
