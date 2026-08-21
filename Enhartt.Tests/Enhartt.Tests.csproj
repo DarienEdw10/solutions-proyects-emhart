@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.11" />
+    <PackageReference Include="Moq" Version="4.20.70" />
+  </ItemGroup>
+
+  <!-- Referencias a tus proyectos locales -->
+  <ItemGroup>
+    <ProjectReference Include="..\Enhartt.Domain\Enhartt.Domain.csproj" />
+    <ProjectReference Include="..\Enhartt.MVC\Enhartt.MVC.csproj" />
+  </ItemGroup>
+
+  <!-- Referencias a las DLLs corporativas de la carpeta Libs -->
+  <ItemGroup>
+    <Reference Include="Magna.Cosma.Autotek.Autentificacion.Library">
+      <HintPath>..\Libs\Autotek.Autentificacion.Library.dll</HintPath>
+    </Reference>
+    <Reference Include="Magna.Cosma.Autotek.Log">
+      <HintPath>..\Libs\Autotek.Log.dll</HintPath>
+    </Reference>
+    <Reference Include="Magna.Cosma.Autotek.Conexion.Library">
+      <HintPath>..\Libs\Autotek.Conexion.Library.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

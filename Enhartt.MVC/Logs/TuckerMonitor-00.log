@@ -29,3 +29,10 @@ D 2026/08/19 13:31:05.708 [ i ] - [ Pro ] Inicio del servicio web [Magna.Cosma.A
 B 2026/08/19 13:51:38.767 [ e ] - [ Rep ] Error al instanciar RepositorioDB: [Timeout expired.  The timeout period elapsed prior to completion of the operation or the server is not responding.]
 D 2026/08/20 08:03:12.830 [ i ] - [ Pro ] Inicio del servicio web [Magna.Cosma.Autotek.TuckerMonitor]
 D 2026/08/20 09:11:13.653 [ i ] - [ Rec ] El usuario [MAGNA\darijim1] modificó tolerancias en Máquina ID [4], Salida [1]. Motivo: [Nuevo ajuste]
+D 2026/08/21 09:16:18.295 [ i ] - [ Rec ] El usuario [MAGNA\darijim1] modificó tolerancias en Máquina ID [5], Salida [5]. Motivo: [Solo pruebas]
+D 2026/08/21 09:28:01.555 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/logs].
+D 2026/08/21 09:28:05.687 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/recetas/altasrecetas].
+D 2026/08/21 09:28:07.853 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/].
+D 2026/08/21 09:28:08.822 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/recetas/altasrecetas].
+D 2026/08/21 09:28:09.973 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/logs].
+D 2026/08/21 09:28:11.345 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/logs/leercontenidolog].

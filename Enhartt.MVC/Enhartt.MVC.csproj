@@ -21,15 +21,14 @@
     <ProjectReference Include="..\Enhartt.Domain\Enhartt.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="Magna.Cosma.Autotek.Log">
-      <HintPath>..\Libs\Autotek.Log.dll</HintPath>
-    </Reference>
-    <Reference Include="Magna.Cosma.Autotek.Autentificacion">
+<!-- Referencias a las DLLs corporativas de la carpeta Libs -->
+<ItemGroup>
+
+    <Reference Include="Magna.Cosma.Autotek.Autentificacion.Library">
       <HintPath>..\Libs\Autotek.Autentificacion.Library.dll</HintPath>
     </Reference>
-    <Reference Include="Magna.Cosma.Autotek.Conexion">
-      <HintPath>..\Libs\Autotek.Conexion.Library.dll</HintPath>
+    <Reference Include="Magna.Cosma.Autotek.Log">
+      <HintPath>..\Libs\Autotek.Log.dll</HintPath>
     </Reference>
   </ItemGroup>
 

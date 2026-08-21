@@ -1,5 +1,6 @@
 using Enhartt.Domain.Repositories;
 using Enhartt.MVC.Models.ViewModels;
+using Enhartt.MVC.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Logger = Magna.Cosma.Autotek.Log.Logger;
@@ -10,16 +11,16 @@ namespace Enhartt.MVC.Controllers;
 public class RecetasController : Controller
 {
     private readonly IRepository _repository;
-    private readonly IConfiguration _configuration;
+    private readonly RepositorioEmpleados _repositorioEmpleados;
     private readonly Logger _logger;
 
     public RecetasController(
-        IRepository repository, 
-        IConfiguration configuration,
+        IRepository repository,
+        RepositorioEmpleados repositorioEmpleados,
         Logger logger)
     {
         _repository = repository;
-        _configuration = configuration;
+        _repositorioEmpleados = repositorioEmpleados;
         _logger = logger;
     }
 
@@ -38,12 +39,20 @@ public class RecetasController : Controller
             cwid = Environment.UserName;
         }
 
+        // 1. Validación en DLL corporativa (Magna Autotek)
         try
         {
-            int nivelUsuario = await _repository.ObtenerNivelUsuarioPorCWIDAsync(cwid);
-            if (nivelUsuario >= 20)
+            var empleadoCorporativo = _repositorioEmpleados.ObtenerEmpleadoPorCWID(cwid);
+            
+            // Si el empleado está dado de baja formalmente en la planta
+            if (empleadoCorporativo != null && !empleadoCorporativo.Activo)
             {
-                return true;
+                _logger.Registrar(
+                    nivel: Logger.NivelesLog.Basico,
+                    tipo: Logger.TiposLog.Errores,
+                    origen: "RecetasController.Permisos",
+                    texto: $"Acceso denegado: El empleado [{cwid}] se encuentra inactivo en la base corporativa.");
+                return false;
             }
         }
         catch (Exception ex)
@@ -52,25 +61,22 @@ public class RecetasController : Controller
                 nivel: Logger.NivelesLog.Basico,
                 tipo: Logger.TiposLog.Errores,
                 origen: "RecetasController.Permisos",
-                texto: $"Error al validar permisos de usuario [{cwid}] en BD: {ex.Message}");
+                texto: $"Error al consultar DLL corporativa para el usuario [{cwid}]: {ex.Message}");
         }
 
-        var sistemasUsers = _configuration.GetSection("PermisosSettings:Sistemas:Usuarios").Get<List<string>>() ?? new();
-        var calidadUsers = _configuration.GetSection("PermisosSettings:CalidadSupervisores:Usuarios").Get<List<string>>() ?? new();
-
-        if (sistemasUsers.Concat(calidadUsers).Any(u => u.Equals(cwid, StringComparison.OrdinalIgnoreCase)))
-        {
-            return true;
-        }
-
+        // 2. Validación de nivel en base de datos local (Nivel >= 20 para Calidad/Supervisores/Sistemas)
         try
         {
-            var sistemasRoles = _configuration.GetSection("PermisosSettings:Sistemas:Roles").Get<List<string>>() ?? new();
-            var calidadRoles = _configuration.GetSection("PermisosSettings:CalidadSupervisores:Roles").Get<List<string>>() ?? new();
-            return sistemasRoles.Concat(calidadRoles).Any(r => User.IsInRole(r));
+            int nivelUsuario = await _repository.ObtenerNivelUsuarioPorCWIDAsync(cwid);
+            return nivelUsuario >= 20;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.Registrar(
+                nivel: Logger.NivelesLog.Basico,
+                tipo: Logger.TiposLog.Errores,
+                origen: "RecetasController.Permisos",
+                texto: $"Error al validar permisos de usuario [{cwid}] en BD: {ex.Message}");
             return false;
         }
     }
@@ -358,9 +364,6 @@ public class RecetasController : Controller
     }
 }
 
-// =============================================================
-// DTOs PARA TRANSFERENCIA DE DATOS EN VISTAS DE RECETAS
-// =============================================================
 public class AgregarCeldaDto
 {
     public string Planta { get; set; } = string.Empty;

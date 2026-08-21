@@ -1,5 +1,5 @@
-﻿@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
-@inject Enhartt.Domain.Repositories.IRepository Repository
+﻿@inject Enhartt.Domain.Repositories.IRepository Repository
+@inject Enhartt.MVC.Services.RepositorioEmpleados RepositorioEmpleados
 
 <!DOCTYPE html>
 <html lang="es">
@@ -22,28 +22,43 @@
 <body class="bg-light">
 
     @{
-        // 1. Obtener usuario de red autenticado
         string nombreCompleto = User?.Identity?.Name ?? "";
-        string nombreUsuario = nombreCompleto;
-        if (nombreUsuario.Contains('\\'))
+        string cwid = nombreCompleto;
+        if (cwid.Contains('\\'))
         {
-            nombreUsuario = nombreUsuario.Split('\\')[1];
+            cwid = cwid.Split('\\')[1];
         }
 
-        // Respaldo local de desarrollo si el navegador no envía el header NTLM
         bool usuarioAutenticado = User?.Identity?.IsAuthenticated == true;
-        if (string.IsNullOrEmpty(nombreUsuario))
+        if (string.IsNullOrEmpty(cwid))
         {
-            nombreUsuario = Environment.UserName;
-            nombreCompleto = $"MAGNA\\{nombreUsuario}";
+            cwid = Environment.UserName;
+            nombreCompleto = $"AUTOTEK\\{cwid}";
             usuarioAutenticado = true;
         }
 
-        // 2. Consulta directa en la BD local emhart.usuarios
+        string nombreAMostrar = cwid;
+        bool existeEnCorporativo = false;
+
+        // Consulta O(1) sin esperas de red bloqueantes
+        var empleadoCorporativo = RepositorioEmpleados.ObtenerEmpleadoPorCWID(cwid);
+        if (empleadoCorporativo != null)
+        {
+            existeEnCorporativo = true;
+            if (!string.IsNullOrWhiteSpace(empleadoCorporativo.NombrePropio))
+            {
+                nombreAMostrar = empleadoCorporativo.NombrePropio.Trim();
+            }
+            else if (!string.IsNullOrWhiteSpace(empleadoCorporativo.NombrePorApellidos))
+            {
+                nombreAMostrar = empleadoCorporativo.NombrePorApellidos.Trim();
+            }
+        }
+
         int nivelUsuario = 0;
         try
         {
-            nivelUsuario = await Repository.ObtenerNivelUsuarioPorCWIDAsync(nombreUsuario);
+            nivelUsuario = await Repository.ObtenerNivelUsuarioPorCWIDAsync(cwid);
         }
         catch
         {
@@ -51,44 +66,10 @@
         }
 
         bool esSistemas = (nivelUsuario >= 30);
-        bool esCalidadOSupervisor = (nivelUsuario >= 20);
-
-        // 3. Fallbacks estáticos SOLO si no existe en emhart.usuarios
-        if (nivelUsuario == 0)
-        {
-            var usuariosSistemas = Configuration.GetSection("PermisosSettings:Sistemas:Usuarios").Get<List<string>>()
-                                   ?? Configuration.GetSection("SuperadminSettings:UsuariosAutorizados").Get<List<string>>()
-                                   ?? new();
-            var rolesSistemas = Configuration.GetSection("PermisosSettings:Sistemas:Roles").Get<List<string>>()
-                                ?? Configuration.GetSection("SuperadminSettings:RolesAutorizados").Get<List<string>>()
-                                ?? new();
-
-            var usuariosCalidad = Configuration.GetSection("PermisosSettings:CalidadSupervisores:Usuarios").Get<List<string>>()
-                                ?? new();
-            var rolesCalidad = Configuration.GetSection("PermisosSettings:CalidadSupervisores:Roles").Get<List<string>>() 
-                                ?? new();
-
-            esSistemas = usuariosSistemas.Any(u => u.Equals(nombreUsuario, StringComparison.OrdinalIgnoreCase));
-            if (!esSistemas && User != null)
-            {
-                try { esSistemas = rolesSistemas.Any(r => User.IsInRole(r)); } catch { esSistemas = false; }
-            }
-
-            esCalidadOSupervisor = usuariosCalidad.Any(u => u.Equals(nombreUsuario, StringComparison.OrdinalIgnoreCase));
-            if (!esCalidadOSupervisor && User != null)
-            {
-                try { esCalidadOSupervisor = rolesCalidad.Any(r => User.IsInRole(r)); } catch { esCalidadOSupervisor = false; }
-            }
-
-            if (esSistemas) nivelUsuario = 30;
-            else if (esCalidadOSupervisor) nivelUsuario = 20;
-            else nivelUsuario = 0; // Permanece en 0 para usuarios inactivos o no registrados
-        }
-
-        bool puedeVerRecetas = nivelUsuario >= 20;
+        bool puedeVerRecetas = (nivelUsuario >= 20);
     }
 
-    <!-- Navbar Reutilizable -->
+    <!-- Navbar Principal -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold d-flex align-items-center" asp-controller="Home" asp-action="Index">
@@ -102,40 +83,33 @@
             <div class="collapse navbar-collapse mt-2 mt-lg-0" id="navbarContent">
                 <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
 
-                    <!-- Indicador de Usuario Autenticado / Sesión Windows -->
+                    <!-- Indicador de Usuario Autenticado: Nombre Completo (CWID) -->
                     @if (usuarioAutenticado)
                     {
                         <span class="badge bg-light text-dark border py-2 px-3 d-flex align-items-center"
-                              title="CWID: @nombreUsuario">
-                            <i class="bi bi-person-circle text-primary me-1 fs-6"></i>
-                            <span class="font-monospace fw-bold">@nombreCompleto</span>
-
-                            @if (nivelUsuario >= 30)
-                            {
-                                <span class="badge bg-danger ms-2">Nivel 30</span>
-                            }
-                            else if (nivelUsuario >= 20)
-                            {
-                                <span class="badge bg-primary ms-2">Nivel 20</span>
-                            }
-                            else if (nivelUsuario >= 10)
-                            {
-                                <span class="badge bg-info text-dark ms-2">Nivel 10</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary ms-2">Inactivo</span>
-                            }
+                              title="CWID: @cwid">
+                            <i class="bi bi-person-circle text-primary me-2 fs-6"></i>
+                            <span class="font-monospace fw-bold">
+                                @if (existeEnCorporativo && !string.Equals(nombreAMostrar, cwid,
+                            StringComparison.OrdinalIgnoreCase))
+                                {
+                                    @($"{nombreAMostrar} ({cwid})")
+                                }
+                                else
+                                {
+                                    @cwid
+                                }
+                            </span>
                         </span>
                     }
 
-                    <!-- 1. NIVEL GENERAL (Nivel >= 10): Visible para todos -->
+                    <!-- 1. Vista Principal (Nivel >= 10 o autenticado) -->
                     <a asp-controller="Home" asp-action="Index"
                        class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")">
                         <i class="bi bi-speedometer2 me-1"></i>Principal
                     </a>
 
-                    <!-- 2. NIVEL CALIDAD / SUPERVISOR / SISTEMAS (Nivel >= 20): Recetas y Altas -->
+                    <!-- 2. Recetas y Altas (Nivel >= 20) -->
                     @if (puedeVerRecetas)
                     {
                         <a asp-controller="Recetas" asp-action="Index"
@@ -149,7 +123,7 @@
                         </a>
                     }
 
-                    <!-- 3. NIVEL EXCLUSIVO SISTEMAS (Nivel >= 30): Logs de Servidor -->
+                    <!-- 3. Logs Exclusivo (Nivel >= 30) -->
                     @if (esSistemas)
                     {
                         <a asp-controller="Logs" asp-action="Index"
@@ -167,7 +141,7 @@
         @RenderBody()
     </div>
 
-    <!-- Librerías de Scripts compartidas -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
