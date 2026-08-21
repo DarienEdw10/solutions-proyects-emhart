@@ -63,24 +63,26 @@ public class UsuariosController : Controller
                 .Where(e => e != null)
                 .Select(e =>
                 {
-                    // 1. Extraer el CWID real (evitando el nombre de la clase)
                     string cwidReal = "";
 
-                    // Intento A: Desde la lista de CWIDs
+                    // 1. Extraer desde la colección CWIDs del empleado
                     if (e.CWIDs != null)
                     {
                         foreach (var c in e.CWIDs)
                         {
                             if (c == null) continue;
 
-                            // Intentar leer propiedades comunes (Valor, Cuenta, Nombre, Id, Codigo)
                             var propValor = c.GetType().GetProperty("Valor")?.GetValue(c)?.ToString()
                                          ?? c.GetType().GetProperty("Cuenta")?.GetValue(c)?.ToString()
                                          ?? c.GetType().GetProperty("Nombre")?.GetValue(c)?.ToString()
                                          ?? c.GetType().GetProperty("CWID")?.GetValue(c)?.ToString();
 
                             string raw = propValor ?? c.ToString() ?? "";
-                            if (!string.IsNullOrWhiteSpace(raw) && !raw.Contains("Magna.Cosma.Autotek"))
+
+                            // Descartar namespaces de la DLL y hashes largos (>= 30 chars)
+                            if (!string.IsNullOrWhiteSpace(raw) &&
+                                !raw.Contains("Magna.Cosma.Autotek") &&
+                                raw.Length < 30)
                             {
                                 cwidReal = raw.Trim();
                                 break;
@@ -88,20 +90,18 @@ public class UsuariosController : Controller
                         }
                     }
 
-                    // Intento B: Respaldo desde el prefijo del correo institucional
+                    // 2. Respaldo desde el correo corporativo (@magna.com)
                     if (string.IsNullOrWhiteSpace(cwidReal) && e.Correos != null)
                     {
                         var correo = e.Correos.FirstOrDefault(corr => corr != null && !string.IsNullOrWhiteSpace(corr.Direccion));
                         if (correo != null && correo.Direccion.Contains('@'))
                         {
-                            cwidReal = correo.Direccion.Split('@')[0].Trim();
+                            string prefijo = correo.Direccion.Split('@')[0].Trim();
+                            if (prefijo.Length < 30)
+                            {
+                                cwidReal = prefijo;
+                            }
                         }
-                    }
-
-                    // Intento C: Código de empleado si no hay CWID
-                    if (string.IsNullOrWhiteSpace(cwidReal) && !string.IsNullOrWhiteSpace(e.Codigo))
-                    {
-                        cwidReal = e.Codigo.Trim();
                     }
 
                     string nombreCompleto = !string.IsNullOrWhiteSpace(e.NombrePropio)
@@ -157,13 +157,15 @@ public class UsuariosController : Controller
         }
         catch (Exception ex)
         {
+            string detalleError = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+
             _logger.Registrar(
                 nivel: Logger.NivelesLog.Basico,
                 tipo: Logger.TiposLog.Errores,
                 origen: "UsuariosController.AsignarNivel",
-                texto: $"Error al asignar nivel a [{dto.Cwid}]: {ex.Message}");
+                texto: $"Error al asignar nivel a [{dto.Cwid}]: {detalleError}");
 
-            return StatusCode(500, new { success = false, message = ex.Message });
+            return StatusCode(500, new { success = false, message = detalleError });
         }
     }
 }

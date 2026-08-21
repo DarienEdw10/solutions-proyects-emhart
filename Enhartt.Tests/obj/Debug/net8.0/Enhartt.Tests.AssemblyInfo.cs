@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Enhartt.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+21da2b3c1d1604bf2bd4458549c838f33d20d942")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ad88cb2e8c5e2a2a9f15b12033ecc6b671664ef9")]
 [assembly: System.Reflection.AssemblyProductAttribute("Enhartt.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Enhartt.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
