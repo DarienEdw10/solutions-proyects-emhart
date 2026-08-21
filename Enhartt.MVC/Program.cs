@@ -2,7 +2,6 @@ using Enhartt.Domain.Data;
 using Enhartt.Domain.Repositories;
 using Enhartt.MVC.Services;
 using Magna.Cosma.Autotek.Autentificacion.Library;
-using Magna.Cosma.Autotek.VIPTRA.Foreign;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.EntityFrameworkCore;
 using Logger = Magna.Cosma.Autotek.Log.Logger;
@@ -21,17 +20,15 @@ if (!Directory.Exists(directorioLogs))
     Directory.CreateDirectory(directorioLogs);
 }
 
-logSettings.ArchivoDeLog = Path.Combine(directorioLogs, logSettings.ArchivoDeLog);
+// Configuración del archivo físico de Logs
+string nombreArchivoLog = string.IsNullOrWhiteSpace(logSettings.ArchivoDeLog) 
+    ? "TuckerMonitor-00.log" 
+    : logSettings.ArchivoDeLog;
+
+logSettings.ArchivoDeLog = Path.Combine(directorioLogs, Path.GetFileName(nombreArchivoLog));
 Logger logger = new(logSettings);
 
-// Log de arranque de la aplicación
-logger.Registrar(
-    nivel: Logger.NivelesLog.Detallado,
-    tipo: Logger.TiposLog.Informativo,
-    origen: "Program.cs",
-    texto: "Inicio del servicio web [Magna.Cosma.Autotek.TuckerMonitor]");
-
-// Inyección del logger corporativo
+// Inyección del logger corporativo como Singleton
 builder.Services.AddSingleton(logger);
 
 // =============================================================
@@ -40,20 +37,27 @@ builder.Services.AddSingleton(logger);
 SettingsAutentificacion settingsAutentificacion = new();
 builder.Configuration.GetSection("SettingsAutentificacion").Bind(settingsAutentificacion);
 
-// Inyección del Repositorio de Empleados mediante ActivatorUtilities
-builder.Services.AddScoped(service => ActivatorUtilities.CreateInstance<RepositorioEmpleados>(
-    service,
-    settingsAutentificacion,
-    logger
-));
+// Inyección como Singleton para mantener el caché y evitar reconexiones lentas en cada petición HTTP
+builder.Services.AddSingleton<RepositorioEmpleados>(sp => 
+    new RepositorioEmpleados(settingsAutentificacion, logger));
 
 // =============================================================
-// 3. INYECCIÓN DE DEPENDENCIAS MVC Y BASE DE DATOS
+// 3. INYECCIÓN DE DEPENDENCIAS MVC Y BASE DE DATOS OPTIMIZADA
 // =============================================================
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(
-    builder.Configuration.GetConnectionString("DefaultConnection")));
+// Configuración de DbContext con control de reconexión y timeouts
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), sqlOptions =>
+    {
+        sqlOptions.CommandTimeout(5); // Máximo 5 segundos de espera por consulta
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 2,
+            maxRetryDelay: TimeSpan.FromSeconds(2),
+            errorNumbersToAdd: null);
+    });
+});
 
 builder.Services.AddScoped<IRepository, Repository>();
 builder.Services.AddScoped<EnharttService>();
@@ -87,8 +91,38 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// =============================================================
+// AUDITORÍA DE INICIO DE SESIÓN Y ACCESOS WEB
+// =============================================================
+app.Use(async (context, next) =>
+{
+    // Solo auditar accesos a páginas principales (ignorar estáticos, css, js, api polling)
+    var path = context.Request.Path.Value?.ToLower() ?? "";
+    bool esRutaVista = path == "" || path == "/" || path.StartsWith("/home") || path.StartsWith("/recetas") || path.StartsWith("/logs");
+    bool esLlamadaApiOEstatal = path.Contains(".") || path.Contains("obtener") || path.Contains("revalidar");
+
+    if (esRutaVista && !esLlamadaApiOEstatal && context.User?.Identity?.IsAuthenticated == true)
+    {
+        string cwid = context.User.Identity.Name ?? "Desconocido";
+        var log = context.RequestServices.GetService<Logger>();
+        
+        log?.Registrar(
+            nivel: Logger.NivelesLog.Detallado,
+            tipo: Logger.TiposLog.Informativo,
+            origen: "Seguridad.Acceso",
+            texto: $"El usuario [{cwid}] inició sesión / ingresó a la vista [{path}].");
+    }
+
+    await next();
+});
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+using (var scope = app.Services.CreateScope())
+{
+    var repoEmpleados = scope.ServiceProvider.GetRequiredService<RepositorioEmpleados>();
+    _ = repoEmpleados.PrecargarPadronAsync();
+}
 
 app.Run();

@@ -10,6 +10,7 @@ namespace Enhartt.Domain.Data
         public DbSet<Parametro> Parametros { get; set; }
         public DbSet<Maquina> Maquinas { get; set; }
         public DbSet<Receta> Receta { get; set; }//quite una s
+        public DbSet<Usuario> Usuarios { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -40,6 +41,12 @@ namespace Enhartt.Domain.Data
                 entity.HasKey(e => e.IdReferencia);
 
                 // Se elimina la relación directa FK con Maquina para evitar fallos de mapeo
+            });
+            modelBuilder.Entity<Usuario>(entity =>
+            {
+                entity.ToTable("usuarios", schema: "emhart");
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.CWID).IsUnique();
             });
         }
     }

@@ -1,0 +1,212 @@
+@{
+    ViewData["Title"] = "Gestión de Colaboradores y Permisos";
+}
+
+<div class="row g-4">
+    <!-- Panel Izquierdo: Buscador en Padrón Corporativo y Selección -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-people-fill text-warning me-2"></i>Padrón Corporativo de Empleados</h6>
+                <span class="badge bg-secondary font-monospace" id="lblTotalEmpleados">Cargando...</span>
+            </div>
+            <div class="card-body p-3">
+                
+                <!-- Buscador Integrado -->
+                <div class="input-group mb-3">
+                    <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                    <input type="text" id="txtBuscarEmpleado" class="form-control" placeholder="Buscar por nómina, nombre o CWID (Ej. 32352, Edwin, darijim1)..." autofocus>
+                    <button class="btn btn-primary" id="btnBuscarEmpleado" type="button">Buscar</button>
+                </div>
+
+                <!-- Tabla de Selección Directa -->
+                <div class="table-responsive border rounded" style="max-height: 420px; overflow-y: auto;">
+                    <table class="table table-hover table-striped table-sm align-middle mb-0 text-nowrap">
+                        <thead class="table-light sticky-top shadow-sm">
+                            <tr>
+                                <th class="text-center" style="width: 80px;">NÚM.</th>
+                                <th>NOMBRE</th>
+                                <th>CWID</th>
+                                <th>PLANTA</th>
+                                <th class="text-center" style="width: 90px;">ACCIÓN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblColaboradoresBody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                                    Cargando empleados del padrón corporativo...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Derecho: Asignación de Roles y Permisos -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0 sticky-top" style="top: 20px;">
+            <div class="card-header bg-primary text-white py-2">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-shield-lock-fill me-2"></i>Asignar Rol al Colaborador</h6>
+            </div>
+            <div class="card-body p-4">
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-secondary small text-uppercase">Colaborador Seleccionado:</label>
+                    <input type="text" id="txtColaboradorSeleccionado" class="form-control bg-light fw-bold text-primary" placeholder="Selecciona un colaborador de la lista..." readonly>
+                    <input type="hidden" id="hdnCwid">
+                    <input type="hidden" id="hdnNombre">
+                    <input type="hidden" id="hdnNomina">
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-secondary small text-uppercase">Nivel de Acceso en Sistema:</label>
+                    <select id="ddlNivel" class="form-select form-select-lg">
+                        <option value="10">Nivel 10 - Consulta (Solo Monitor)</option>
+                        <option value="20">Nivel 20 - Calidad / Supervisión (Recetas)</option>
+                        <option value="30">Nivel 30 - Sistemas / Superadmin (Total)</option>
+                    </select>
+                    <div class="form-text mt-2 small">
+                        * <strong>Nivel 20</strong> permite editar recetas y tolerancias.<br>
+                        * <strong>Nivel 30</strong> otorga acceso a Logs y Asignación de Usuarios.
+                    </div>
+                </div>
+
+                <button type="button" id="btnGuardarPermiso" class="btn btn-success btn-lg w-100 py-2 fw-bold" disabled>
+                    <i class="bi bi-check-circle-fill me-2"></i>Guardar Permiso
+                </button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const txtBuscar = document.getElementById('txtBuscarEmpleado');
+        const btnBuscar = document.getElementById('btnBuscarEmpleado');
+        const tbody = document.getElementById('tblColaboradoresBody');
+        const btnGuardar = document.getElementById('btnGuardarPermiso');
+        const lblTotal = document.getElementById('lblTotalEmpleados');
+
+        let debounceTimer;
+
+        async function cargarEmpleados(filtro = '') {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Buscando...</td></tr>`;
+
+            try {
+                const resp = await fetch(`/Usuarios/BuscarColaboradoresCorporativos?query=${encodeURIComponent(filtro)}`);
+                const res = await resp.json();
+
+                if (!res.success || !res.data || res.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No se encontraron empleados coincidentes.</td></tr>`;
+                    lblTotal.textContent = '0 resultados';
+                    return;
+                }
+
+                lblTotal.textContent = `${res.data.length} mostrados`;
+
+                tbody.innerHTML = res.data.map(e => `
+                    <tr>
+                        <td class="text-center fw-bold font-monospace">${e.numero}</td>
+                        <td>${e.nombre}</td>
+                        <td><span class="badge ${e.cwid ? 'bg-secondary' : 'bg-light text-dark border'} font-monospace">${e.cwid || 'Sin CWID'}</span></td>
+                        <td><span class="badge bg-light text-secondary border">${e.planta}</span></td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold btn-seleccionar"
+                                    data-cwid="${e.cwid}"
+                                    data-nombre="${e.nombre}"
+                                    data-numero="${e.numero}">
+                                <i class="bi bi-arrow-right-circle"></i> Elegir
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Asignar eventos de click a cada botón Elegir
+                document.querySelectorAll('.btn-seleccionar').forEach(btn => {
+                    btn.addEventListener('click', (ev) => {
+                        const b = ev.currentTarget;
+                        const cwid = b.dataset.cwid;
+                        const nombre = b.dataset.nombre;
+                        const numero = b.dataset.numero;
+
+                        document.getElementById('txtColaboradorSeleccionado').value = `#${numero} - ${nombre} (${cwid || 'Sin CWID'})`;
+                        document.getElementById('hdnCwid').value = cwid;
+                        document.getElementById('hdnNombre').value = nombre;
+                        document.getElementById('hdnNomina').value = numero;
+
+                        btnGuardar.disabled = !cwid;
+
+                        // Resaltar fila seleccionada
+                        document.querySelectorAll('#tblColaboradoresBody tr').forEach(tr => tr.classList.remove('table-primary'));
+                        b.closest('tr').classList.add('table-primary');
+                    });
+                });
+
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-1"></i> Error al consultar el padrón corporativo.</td></tr>`;
+                lblTotal.textContent = 'Error';
+            }
+        }
+
+        // Búsqueda interactiva con debounce (busca automáticamente al escribir)
+        txtBuscar.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                cargarEmpleados(txtBuscar.value.trim());
+            }, 300);
+        });
+
+        btnBuscar.addEventListener('click', () => cargarEmpleados(txtBuscar.value.trim()));
+
+        // Guardar Permiso
+        btnGuardar.addEventListener('click', async () => {
+            const cwid = document.getElementById('hdnCwid').value;
+            const nombre = document.getElementById('hdnNombre').value;
+            const nivel = parseInt(document.getElementById('ddlNivel').value);
+
+            if (!cwid) {
+                Swal.fire('Atención', 'El colaborador seleccionado no tiene una cuenta de red (CWID) vinculada.', 'warning');
+                return;
+            }
+
+            btnGuardar.disabled = true;
+            btnGuardar.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Guardando...`;
+
+            try {
+                const resp = await fetch('/Usuarios/AsignarNivel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cwid, nombre, nivel })
+                });
+                const res = await resp.json();
+
+                if (res.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Permiso Asignado!',
+                        text: res.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'No se pudo comunicar con el servidor.', 'error');
+            } finally {
+                btnGuardar.disabled = false;
+                btnGuardar.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>Guardar Permiso`;
+            }
+        });
+
+        // Carga inicial de empleados
+        cargarEmpleados();
+    });
+</script>
+}

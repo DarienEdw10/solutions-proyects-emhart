@@ -1,5 +1,6 @@
-﻿@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
-@inject Magna.Cosma.Autotek.VIPTRA.Foreign.RepositorioEmpleados RepositorioEmpleados
+﻿@inject Enhartt.Domain.Repositories.IRepository Repository
+@inject Enhartt.MVC.Services.RepositorioEmpleados RepositorioEmpleados
+
 <!DOCTYPE html>
 <html lang="es">
 
@@ -21,68 +22,54 @@
 <body class="bg-light">
 
     @{
-        // 1. Obtener usuario de red autenticado
         string nombreCompleto = User?.Identity?.Name ?? "";
-        string nombreUsuario = nombreCompleto;
-        if (nombreUsuario.Contains('\\'))
+        string cwid = nombreCompleto;
+        if (cwid.Contains('\\'))
         {
-            nombreUsuario = nombreUsuario.Split('\\')[1];
+            cwid = cwid.Split('\\')[1];
         }
 
-        // Respaldo local de desarrollo si el navegador no envía el header NTLM
         bool usuarioAutenticado = User?.Identity?.IsAuthenticated == true;
-        if (string.IsNullOrEmpty(nombreUsuario))
+        if (string.IsNullOrEmpty(cwid))
         {
-            nombreUsuario = Environment.UserName;
-            nombreCompleto = $"MAGNA\\{nombreUsuario}";
+            cwid = Environment.UserName;
+            nombreCompleto = $"AUTOTEK\\{cwid}";
             usuarioAutenticado = true;
         }
 
-        // 2. Consulta en base de datos corporativa de Magna (VIPTRA)
-        bool empleadoActivo = false;
+        string nombreAMostrar = cwid;
+        bool existeEnCorporativo = false;
+
+        // Consulta O(1) sin esperas de red bloqueantes
+        var empleadoCorporativo = RepositorioEmpleados.ObtenerEmpleadoPorCWID(cwid);
+        if (empleadoCorporativo != null)
+        {
+            existeEnCorporativo = true;
+            if (!string.IsNullOrWhiteSpace(empleadoCorporativo.NombrePropio))
+            {
+                nombreAMostrar = empleadoCorporativo.NombrePropio.Trim();
+            }
+            else if (!string.IsNullOrWhiteSpace(empleadoCorporativo.NombrePorApellidos))
+            {
+                nombreAMostrar = empleadoCorporativo.NombrePorApellidos.Trim();
+            }
+        }
+
+        int nivelUsuario = 0;
         try
         {
-            var emp = RepositorioEmpleados.ObtenerEmpleadoPorCWID(nombreUsuario);
-            if (emp != null && emp.Activo)
-            {
-                empleadoActivo = true;
-            }
+            nivelUsuario = await Repository.ObtenerNivelUsuarioPorCWIDAsync(cwid);
         }
         catch
         {
-            empleadoActivo = false;
+            nivelUsuario = 0;
         }
 
-        // 3. Listas y roles desde appsettings.json
-        var usuariosSistemas = Configuration.GetSection("PermisosSettings:Sistemas:Usuarios").Get<List<string>>() 
-                               ?? Configuration.GetSection("SuperadminSettings:UsuariosAutorizados").Get<List<string>>() 
-                               ?? new();
-        var rolesSistemas = Configuration.GetSection("PermisosSettings:Sistemas:Roles").Get<List<string>>() 
-                            ?? Configuration.GetSection("SuperadminSettings:RolesAutorizados").Get<List<string>>() 
-                            ?? new();
-
-        var usuariosCalidad = Configuration.GetSection("PermisosSettings:CalidadSupervisores:Usuarios").Get<List<string>>() ?? new();
-        var rolesCalidad = Configuration.GetSection("PermisosSettings:CalidadSupervisores:Roles").Get<List<string>>() ?? new();
-
-        // 4. Evaluación de Nivel Sistemas (Superadmin)
-        bool esSistemas = usuariosSistemas.Any(u => u.Equals(nombreUsuario, StringComparison.OrdinalIgnoreCase));
-        if (!esSistemas && User != null)
-        {
-            try { esSistemas = rolesSistemas.Any(r => User.IsInRole(r)); } catch { esSistemas = false; }
-        }
-
-        // 5. Evaluación de Nivel Calidad / Supervisores
-        bool esCalidadOSupervisor = usuariosCalidad.Any(u => u.Equals(nombreUsuario, StringComparison.OrdinalIgnoreCase));
-        if (!esCalidadOSupervisor && User != null)
-        {
-            try { esCalidadOSupervisor = rolesCalidad.Any(r => User.IsInRole(r)); } catch { esCalidadOSupervisor = false; }
-        }
-
-        // Sistemas hereda los permisos de Recetas, o bien cualquier empleado activo de Calidad/Sistemas
-        bool puedeVerRecetas = esSistemas || esCalidadOSupervisor || empleadoActivo;
+        bool esSistemas = (nivelUsuario >= 30);
+        bool puedeVerRecetas = (nivelUsuario >= 20);
     }
 
-    <!-- Navbar Reutilizable -->
+    <!-- Navbar Principal -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold d-flex align-items-center" asp-controller="Home" asp-action="Index">
@@ -95,54 +82,64 @@
             </button>
             <div class="collapse navbar-collapse mt-2 mt-lg-0" id="navbarContent">
                 <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
-                    
-                    <!-- Indicador de Usuario Autenticado / Sesión Windows -->
+
+                    <!-- Indicador de Usuario Autenticado: Nombre Completo (CWID) -->
                     @if (usuarioAutenticado)
                     {
-                        <span class="badge bg-light text-dark border py-2 px-3 d-flex align-items-center" title="Usuario Autenticado">
-                            <i class="bi bi-person-circle text-primary me-1 fs-6"></i>
-                            <span class="font-monospace fw-bold">@nombreCompleto</span>
-                        </span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-secondary py-2 px-3">
-                            <i class="bi bi-person-fill me-1"></i>Invitado
+                        <span class="badge bg-light text-dark border py-2 px-3 d-flex align-items-center"
+                              title="CWID: @cwid">
+                            <i class="bi bi-person-circle text-primary me-2 fs-6"></i>
+                            <span class="font-monospace fw-bold">
+                                @if (existeEnCorporativo && !string.Equals(nombreAMostrar, cwid,
+                            StringComparison.OrdinalIgnoreCase))
+                                {
+                                    @($"{nombreAMostrar} ({cwid})")
+                                }
+                                else
+                                {
+                                    @cwid
+                                }
+                            </span>
                         </span>
                     }
 
-                    <span class="badge bg-success py-2 px-3">
-                        <i class="bi bi-wifi me-1"></i>ONLINE
-                    </span>
-
-                    <!-- 1. NIVEL GENERAL: Visible para todos -->
-                    <a asp-controller="Home" asp-action="Index" 
+                    <!-- 1. Vista Principal (Nivel >= 10 o autenticado) -->
+                    <a asp-controller="Home" asp-action="Index"
                        class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")">
                         <i class="bi bi-speedometer2 me-1"></i>Principal
                     </a>
 
-                    <!-- 2. NIVEL CALIDAD / SUPERVISOR / SISTEMAS: Recetas y Altas -->
+                    <!-- 2. Recetas y Altas (Nivel >= 20) -->
                     @if (puedeVerRecetas)
                     {
-                        <a asp-controller="Recetas" asp-action="Index" 
+                        <a asp-controller="Recetas" asp-action="Index"
                            class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Recetas" ? "active" : "")">
                             <i class="bi bi-sliders me-1"></i>Recetas
                         </a>
 
-                        <a asp-controller="Recetas" asp-action="AltasRecetas" 
+                        <a asp-controller="Recetas" asp-action="AltasRecetas"
                            class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "AltasRecetas" ? "active" : "")">
                             <i class="bi bi-plus-square-fill me-1"></i>Altas Recetas
                         </a>
                     }
-
-                    <!-- 3. NIVEL EXCLUSIVO SISTEMAS: Logs de Servidor -->
+                    <!-- Módulo exclusivo Sistemas: Usuarios y Logs -->
                     @if (esSistemas)
                     {
-                        <a asp-controller="Logs" asp-action="Index" 
+                        <a asp-controller="Usuarios" asp-action="Index"
+                           class="btn btn-outline-info btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Usuarios" ? "active" : "")">
+                            <i class="bi bi-person-gear me-1"></i>Usuarios
+                        </a>
+                    }
+
+                    <!-- 3. Logs Exclusivo (Nivel >= 30) -->
+                    @if (esSistemas)
+                    {
+                        <a asp-controller="Logs" asp-action="Index"
                            class="btn btn-outline-warning btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Logs" ? "active" : "")">
                             <i class="bi bi-terminal-fill me-1"></i>Logs
                         </a>
                     }
+
                 </div>
             </div>
         </div>
@@ -153,7 +150,7 @@
         @RenderBody()
     </div>
 
-    <!-- Librerías de Scripts compartidas -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>

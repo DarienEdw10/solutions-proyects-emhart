@@ -19,3 +19,31 @@ B 2026/08/18 09:42:39.381 [ e ] - [ Rep ] Error al instanciar RepositorioDB: [Lo
 B 2026/08/18 09:42:43.401 [ e ] - [ Rep ] Error al instanciar RepositorioDB: [Login failed for user 'MAGNA\darijim1'.]
 D 2026/08/18 09:58:08.282 [ i ] - [ Pro ] Inicio del servicio web [Magna.Cosma.Autotek.TuckerMonitor]
 B 2026/08/18 09:58:14.400 [ e ] - [ Rep ] Error al instanciar RepositorioDB: [Login failed for user 'MAGNA\darijim1'.]
+D 2026/08/19 11:25:24.724 [ i ] - [ Pro ] Inicio del servicio web [Magna.Cosma.Autotek.TuckerMonitor]
+B 2026/08/19 11:25:30.760 [ e ] - [ Rep ] Error al instanciar RepositorioDB: [Login failed for user 'MAGNA\darijim1'.]
+D 2026/08/19 11:26:26.241 [ i ] - [ Pro ] Inicio del servicio web [Magna.Cosma.Autotek.TuckerMonitor]
+D 2026/08/19 12:04:21.565 [ i ] - [ Pro ] Inicio del servicio web [Magna.Cosma.Autotek.TuckerMonitor]
+D 2026/08/19 12:15:04.672 [ i ] - [ Pro ] Inicio del servicio web [Magna.Cosma.Autotek.TuckerMonitor]
+D 2026/08/19 12:20:22.910 [ i ] - [ Pro ] Inicio del servicio web [Magna.Cosma.Autotek.TuckerMonitor]
+D 2026/08/19 13:31:05.708 [ i ] - [ Pro ] Inicio del servicio web [Magna.Cosma.Autotek.TuckerMonitor]
+B 2026/08/19 13:51:38.767 [ e ] - [ Rep ] Error al instanciar RepositorioDB: [Timeout expired.  The timeout period elapsed prior to completion of the operation or the server is not responding.]
+D 2026/08/20 08:03:12.830 [ i ] - [ Pro ] Inicio del servicio web [Magna.Cosma.Autotek.TuckerMonitor]
+D 2026/08/20 09:11:13.653 [ i ] - [ Rec ] El usuario [MAGNA\darijim1] modificó tolerancias en Máquina ID [4], Salida [1]. Motivo: [Nuevo ajuste]
+D 2026/08/21 09:16:18.295 [ i ] - [ Rec ] El usuario [MAGNA\darijim1] modificó tolerancias en Máquina ID [5], Salida [5]. Motivo: [Solo pruebas]
+D 2026/08/21 09:28:01.555 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/logs].
+D 2026/08/21 09:28:05.687 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/recetas/altasrecetas].
+D 2026/08/21 09:28:07.853 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/].
+D 2026/08/21 09:28:08.822 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/recetas/altasrecetas].
+D 2026/08/21 09:28:09.973 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/logs].
+D 2026/08/21 09:28:11.345 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/logs/leercontenidolog].
+D 2026/08/21 10:05:25.653 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/logs].
+B 2026/08/21 10:13:44.237 [ e ] - [ Rep ] Error al inicializar RepositorioDB: A network-related or instance-specific error occurred while establishing a connection to SQL Server. The server was not found or was not accessible. Verify that the instance name is correct and that SQL Server is configured to allow remote connections. (provider: SQL Network Interfaces, error: 26 - Error Locating Server/Instance Specified)
+D 2026/08/21 10:14:06.794 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/logs].
+D 2026/08/21 10:19:41.791 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/logs].
+D 2026/08/21 10:20:05.874 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/].
+D 2026/08/21 10:20:46.655 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/].
+D 2026/08/21 10:42:39.910 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/].
+D 2026/08/21 10:42:50.344 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/logs].
+D 2026/08/21 10:42:53.212 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/logs/leercontenidolog].
+D 2026/08/21 10:42:53.546 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/logs/leercontenidolog].
+D 2026/08/21 10:43:10.882 [ i ] - [ Seg ] El usuario [MAGNA\darijim1] inició sesión / ingresó a la vista [/].
