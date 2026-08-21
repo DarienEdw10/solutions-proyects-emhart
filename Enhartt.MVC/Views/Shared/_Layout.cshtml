@@ -122,6 +122,14 @@
                             <i class="bi bi-plus-square-fill me-1"></i>Altas Recetas
                         </a>
                     }
+                    <!-- Módulo exclusivo Sistemas: Usuarios y Logs -->
+                    @if (esSistemas)
+                    {
+                        <a asp-controller="Usuarios" asp-action="Index"
+                           class="btn btn-outline-info btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Usuarios" ? "active" : "")">
+                            <i class="bi bi-person-gear me-1"></i>Usuarios
+                        </a>
+                    }
 
                     <!-- 3. Logs Exclusivo (Nivel >= 30) -->
                     @if (esSistemas)
@@ -131,6 +139,7 @@
                             <i class="bi bi-terminal-fill me-1"></i>Logs
                         </a>
                     }
+
                 </div>
             </div>
         </div>

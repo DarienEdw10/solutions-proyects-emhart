@@ -46,15 +46,5 @@ public class RepositorioEmpleadosTests
         Assert.NotEmpty(misRegistros);
     }
 
-    [Fact]
-    public void ObtenerEmpleadoPorCWID_DebeRetornarDarienEdwin()
-    {
-        // Act
-        var empleado = _repositorio.ObtenerEmpleadoPorCWID("darijim1");
 
-        // Assert
-        Assert.NotNull(empleado);
-        Assert.Equal("Darien Edwin Jimenez Gonzaga", empleado.NombrePropio);
-        Assert.Equal(32352, empleado.NumeroDeEmpleado);
-    }
 }

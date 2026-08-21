@@ -311,6 +311,38 @@ namespace Enhartt.Domain.Repositories
             return entityEntry.Entity;
         }
 
+       public async Task GuardarUsuarioNivelAsync(string cwid, int nivel, string nombre, string modificadoPor)
+{
+    if (string.IsNullOrWhiteSpace(cwid)) return;
+
+    if (cwid.Contains('\\'))
+    {
+        cwid = cwid.Split('\\')[1];
+    }
+
+    string cwidLimpio = cwid.Trim().ToLower();
+
+    var usuario = await _context.Usuarios
+        .FirstOrDefaultAsync(u => u.CWID.ToLower() == cwidLimpio);
+
+    if (usuario != null)
+    {
+        usuario.NivelDeUsuario = nivel;
+        usuario.Activo = true;
+    }
+    else
+    {
+        _context.Usuarios.Add(new Enhartt.Domain.Models.Usuario
+        {
+            CWID = cwid.Trim(),
+            NivelDeUsuario = nivel,
+            Activo = true,
+            FechaCreacion = DateTime.Now
+        });
+    }
+
+    await _context.SaveChangesAsync();
+}
         // =============================================================
         // REVALIDACIÓN DE CALIDAD
         // =============================================================
@@ -362,8 +394,8 @@ namespace Enhartt.Domain.Repositories
                 if (!p.IdentificadorId.HasValue || !p.Salida.HasValue) continue;
 
                 var recetasSalida = recetasActivas
-                    .Where(r => r.IdMaquina == p.IdentificadorId.Value && 
-                                r.Salida == p.Salida.Value && 
+                    .Where(r => r.IdMaquina == p.IdentificadorId.Value &&
+                                r.Salida == p.Salida.Value &&
                                 (r.MinVal != 0 || r.MaxVal != 0))
                     .ToList();
 
