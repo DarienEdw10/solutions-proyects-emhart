@@ -13,12 +13,12 @@ namespace Enhartt.Domain.Repositories
         Task<Receta?> ActualizarRecetaAsync(Receta receta, string usuario);
         Task<Receta?> AgregarRecetaAsync(Receta receta, string usuario);
         Task ActualizarRecetaConHistorialAsync(Receta nuevaReceta, string usuario);
-        Task<IEnumerable<Receta>> ObtenerAuditoriaRecetasAsync(
+        Task GuardarUsuarioNivelAsync(string cwid, int nivel, string nombre, string modificadoPor);        Task<IEnumerable<Receta>> ObtenerAuditoriaRecetasAsync(
             int? idMaquina,
             string? salida,
             DateTime? fechaInicio,
             DateTime? fechaFin);
-
+        Task<int> ObtenerNivelUsuarioPorCWIDAsync(string cwid);
         // -------------------------------------------------------------
         // MÓDULO MAQUINAS (Catálogo Celdas Tucker)
         // -------------------------------------------------------------

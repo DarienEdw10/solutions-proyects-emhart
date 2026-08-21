@@ -1,4 +1,7 @@
-﻿<!DOCTYPE html>
+﻿@inject Enhartt.Domain.Repositories.IRepository Repository
+@inject Enhartt.MVC.Services.RepositorioEmpleados RepositorioEmpleados
+
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -10,13 +13,63 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <!-- Estilos Locales -->
     <link rel="stylesheet" href="~/css/style.css" asp-append-version="true" />
 </head>
 
 <body class="bg-light">
 
-    <!-- Navbar Reutilizable -->
+    @{
+        string nombreCompleto = User?.Identity?.Name ?? "";
+        string cwid = nombreCompleto;
+        if (cwid.Contains('\\'))
+        {
+            cwid = cwid.Split('\\')[1];
+        }
+
+        bool usuarioAutenticado = User?.Identity?.IsAuthenticated == true;
+        if (string.IsNullOrEmpty(cwid))
+        {
+            cwid = Environment.UserName;
+            nombreCompleto = $"AUTOTEK\\{cwid}";
+            usuarioAutenticado = true;
+        }
+
+        string nombreAMostrar = cwid;
+        bool existeEnCorporativo = false;
+
+        // Consulta O(1) sin esperas de red bloqueantes
+        var empleadoCorporativo = RepositorioEmpleados.ObtenerEmpleadoPorCWID(cwid);
+        if (empleadoCorporativo != null)
+        {
+            existeEnCorporativo = true;
+            if (!string.IsNullOrWhiteSpace(empleadoCorporativo.NombrePropio))
+            {
+                nombreAMostrar = empleadoCorporativo.NombrePropio.Trim();
+            }
+            else if (!string.IsNullOrWhiteSpace(empleadoCorporativo.NombrePorApellidos))
+            {
+                nombreAMostrar = empleadoCorporativo.NombrePorApellidos.Trim();
+            }
+        }
+
+        int nivelUsuario = 0;
+        try
+        {
+            nivelUsuario = await Repository.ObtenerNivelUsuarioPorCWIDAsync(cwid);
+        }
+        catch
+        {
+            nivelUsuario = 0;
+        }
+
+        bool esSistemas = (nivelUsuario >= 30);
+        bool puedeVerRecetas = (nivelUsuario >= 20);
+    }
+
+    <!-- Navbar Principal -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid">
             <a class="navbar-brand fw-bold d-flex align-items-center" asp-controller="Home" asp-action="Index">
@@ -29,43 +82,64 @@
             </button>
             <div class="collapse navbar-collapse mt-2 mt-lg-0" id="navbarContent">
                 <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
-                    
-                    <!-- Indicador de Usuario Autenticado / Sesión Windows -->
-                    @if (User?.Identity?.IsAuthenticated == true)
+
+                    <!-- Indicador de Usuario Autenticado: Nombre Completo (CWID) -->
+                    @if (usuarioAutenticado)
                     {
-                        <span class="badge bg-light text-dark border py-2 px-3 d-flex align-items-center" title="Usuario Autenticado por Windows">
-                            <i class="bi bi-person-circle text-primary me-1 fs-6"></i>
-                            <span class="font-monospace fw-bold">@User.Identity.Name</span>
-                        </span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-secondary py-2 px-3">
-                            <i class="bi bi-person-fill me-1"></i>Invitado
+                        <span class="badge bg-light text-dark border py-2 px-3 d-flex align-items-center"
+                              title="CWID: @cwid">
+                            <i class="bi bi-person-circle text-primary me-2 fs-6"></i>
+                            <span class="font-monospace fw-bold">
+                                @if (existeEnCorporativo && !string.Equals(nombreAMostrar, cwid,
+                            StringComparison.OrdinalIgnoreCase))
+                                {
+                                    @($"{nombreAMostrar} ({cwid})")
+                                }
+                                else
+                                {
+                                    @cwid
+                                }
+                            </span>
                         </span>
                     }
 
-                    <span class="badge bg-success py-2 px-3">
-                        <i class="bi bi-wifi me-1"></i>ONLINE
-                    </span>
-
-                    <!-- Botón Dashboard Principal -->
-                    <a asp-controller="Home" asp-action="Index" 
+                    <!-- 1. Vista Principal (Nivel >= 10 o autenticado) -->
+                    <a asp-controller="Home" asp-action="Index"
                        class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")">
                         <i class="bi bi-speedometer2 me-1"></i>Principal
                     </a>
 
-                    <!-- Botón Gestión de Recetas -->
-                    <a asp-controller="Recetas" asp-action="Index" 
-                       class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Recetas" ? "active" : "")">
-                        <i class="bi bi-sliders me-1"></i>Recetas
-                    </a>
+                    <!-- 2. Recetas y Altas (Nivel >= 20) -->
+                    @if (puedeVerRecetas)
+                    {
+                        <a asp-controller="Recetas" asp-action="Index"
+                           class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "Index" && ViewContext.RouteData.Values["Controller"]?.ToString() == "Recetas" ? "active" : "")">
+                            <i class="bi bi-sliders me-1"></i>Recetas
+                        </a>
 
-                    <!-- Botón Altas de Celdas y Salidas -->
-                    <a asp-controller="Recetas" asp-action="AltasRecetas" 
-                       class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "AltasRecetas" ? "active" : "")">
-                        <i class="bi bi-plus-square-fill me-1"></i>Altas Recetas
-                    </a>
+                        <a asp-controller="Recetas" asp-action="AltasRecetas"
+                           class="btn btn-outline-light btn-sm @(ViewContext.RouteData.Values["Action"]?.ToString() == "AltasRecetas" ? "active" : "")">
+                            <i class="bi bi-plus-square-fill me-1"></i>Altas Recetas
+                        </a>
+                    }
+                    <!-- Módulo exclusivo Sistemas: Usuarios y Logs -->
+                    @if (esSistemas)
+                    {
+                        <a asp-controller="Usuarios" asp-action="Index"
+                           class="btn btn-outline-info btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Usuarios" ? "active" : "")">
+                            <i class="bi bi-person-gear me-1"></i>Usuarios
+                        </a>
+                    }
+
+                    <!-- 3. Logs Exclusivo (Nivel >= 30) -->
+                    @if (esSistemas)
+                    {
+                        <a asp-controller="Logs" asp-action="Index"
+                           class="btn btn-outline-warning btn-sm @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Logs" ? "active" : "")">
+                            <i class="bi bi-terminal-fill me-1"></i>Logs
+                        </a>
+                    }
+
                 </div>
             </div>
         </div>
@@ -76,7 +150,8 @@
         @RenderBody()
     </div>
 
-    <!-- Librerías de Scripts compartidas -->
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>

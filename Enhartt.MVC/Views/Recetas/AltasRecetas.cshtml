@@ -148,6 +148,7 @@
 
 @section Scripts {
     <script>
+        
         const celdasData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model?.Celdas ?? new List<Enhartt.MVC.Models.ViewModels.CeldaViewModel>()));
 
         // Referencias de Selects e Inputs de Texto Alternativos

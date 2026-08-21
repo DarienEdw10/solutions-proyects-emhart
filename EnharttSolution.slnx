@@ -2,4 +2,5 @@
   <Project Path="Enhartt.Api/Enhartt.Api.csproj" />
   <Project Path="Enhartt.Domain/Enhartt.Domain.csproj" />
   <Project Path="Enhartt.MVC/Enhartt.MVC.csproj" />
+  <Project Path="Enhartt.Tests/Enhartt.Tests.csproj" />
 </Solution>

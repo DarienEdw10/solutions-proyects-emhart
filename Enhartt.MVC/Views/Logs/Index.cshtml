@@ -1,0 +1,87 @@
+@{
+    ViewData["Title"] = "Visor de Logs";
+    var archivos = ViewBag.Archivos as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+}
+
+<div class="container-fluid py-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="fw-bold text-light mb-0"><i class="bi bi-terminal-fill me-2 text-warning"></i>Visor de Logs del Sistema</h4>
+            <small class="text-muted">Consola de diagnóstico y auditoría operativa</small>
+        </div>
+        <span class="badge bg-danger px-3 py-2 fs-6"><i class="bi bi-shield-lock me-1"></i>Superadmin / Sistemas</span>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card bg-dark border-secondary shadow-sm h-100">
+                <div class="card-header bg-black text-light fw-bold border-secondary">
+                    <i class="bi bi-files me-1 text-primary"></i> Archivos de Log
+                </div>
+                <div class="list-group list-group-flush" id="lista-archivos">
+                    @foreach (var a in archivos)
+                    {
+                        <button type="button" class="list-group-item list-group-item-action bg-dark text-light border-secondary d-flex justify-content-between align-items-center" onclick="cargarLog('@a.Nombre')">
+                            <div>
+                                <i class="bi bi-file-earmark-code me-2 text-warning"></i>
+                                <span class="fw-bold">@a.Nombre</span>
+                                <br><small class="text-muted">@a.UltimaModificacion</small>
+                            </div>
+                            <span class="badge bg-secondary">@a.TamañoKb KB</span>
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card bg-dark border-secondary shadow-sm h-100">
+                <div class="card-header bg-black text-light d-flex justify-content-between align-items-center border-secondary">
+                    <span id="lbl-archivo-abierto" class="font-monospace text-warning"><i class="bi bi-code-square me-1"></i>Seleccione un archivo de log</span>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-warning" onclick="recargarLogActual()"><i class="bi bi-arrow-clockwise"></i> Refrescar</button>
+                        <a id="btn-descargar-log" href="#" class="btn btn-sm btn-outline-light disabled"><i class="bi bi-download"></i> Descargar</a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <pre id="terminal-log" class="p-3 mb-0 font-monospace text-light" style="background-color: #0d1117; height: 550px; overflow-y: scroll; font-size: 12px; white-space: pre-wrap;">Haga clic en un archivo de la lista lateral para visualizar sus registros.</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let archivoSeleccionado = '';
+
+    async function cargarLog(nombreArchivo) {
+        archivoSeleccionado = nombreArchivo;
+        document.getElementById('lbl-archivo-abierto').innerHTML = `<i class="bi bi-file-earmark-text text-success me-1"></i>${nombreArchivo}`;
+        
+        const btnDescargar = document.getElementById('btn-descargar-log');
+        btnDescargar.href = `/Logs/Descargar?archivo=${encodeURIComponent(nombreArchivo)}`;
+        btnDescargar.classList.remove('disabled');
+
+        const terminal = document.getElementById('terminal-log');
+        terminal.innerText = 'Cargando registros...';
+
+        try {
+            const resp = await fetch(`/Logs/LeerContenidoLog?archivo=${encodeURIComponent(nombreArchivo)}`);
+            const res = await resp.json();
+            if (res.success) {
+                terminal.innerText = res.contenido || '(El archivo de log está vacío actualmente)';
+                terminal.scrollTop = terminal.scrollHeight;
+            } else {
+                terminal.innerText = 'Error al leer el archivo: ' + res.message;
+            }
+        } catch (e) {
+            terminal.innerText = 'Error al obtener los logs.';
+        }
+    }
+
+    function recargarLogActual() {
+        if (archivoSeleccionado) {
+            cargarLog(archivoSeleccionado);
+        }
+    }
+</script>

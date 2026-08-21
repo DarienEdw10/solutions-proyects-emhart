@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Enhartt.MVC.Controllers;
 
-[AllowAnonymous]
+[Authorize]
 public class HomeController : Controller
 {
     private readonly EnharttService enharttService;
@@ -53,14 +53,11 @@ public class HomeController : Controller
         {
             string? estatusLimpio = NormalizarEstatus(estatus);
 
-            var taskRegistros = repository.ObtenerParametrosPaginadosAsync(
+            // Ejecución secuencial para no colisionar el DbContext
+            var registros = await repository.ObtenerParametrosPaginadosAsync(
                 identificadorId, estatusLimpio, fechaInicio, fechaFin, busqueda, pagina: 1, registrosPorPagina: int.MaxValue);
-            var taskMaquinas = enharttService.ObtenerMaquinasAsync();
 
-            await Task.WhenAll(taskRegistros, taskMaquinas);
-
-            var registros = await taskRegistros;
-            var maquinas = (await taskMaquinas) ?? [];
+            var maquinas = (await enharttService.ObtenerMaquinasAsync()) ?? [];
             var dictMaquinas = maquinas.ToDictionary(m => m.Id, m => m.Celda ?? "CEN-01");
 
             var builder = new System.Text.StringBuilder();
@@ -97,14 +94,11 @@ public class HomeController : Controller
         {
             string? estatusLimpio = NormalizarEstatus(estatus);
 
-            var taskRegistros = repository.ObtenerParametrosPaginadosAsync(
+            // Ejecución secuencial para no colisionar el DbContext
+            var registros = await repository.ObtenerParametrosPaginadosAsync(
                 identificadorId, estatusLimpio, fechaInicio, fechaFin, busqueda, pagina: 1, registrosPorPagina: int.MaxValue);
-            var taskMaquinas = enharttService.ObtenerMaquinasAsync();
 
-            await Task.WhenAll(taskRegistros, taskMaquinas);
-
-            var registros = await taskRegistros;
-            var maquinas = (await taskMaquinas) ?? [];
+            var maquinas = (await enharttService.ObtenerMaquinasAsync()) ?? [];
             var dictMaquinas = maquinas.ToDictionary(m => m.Id, m => m.Celda ?? "CEN-01");
 
             var dataFormateada = registros.Select(p => new
@@ -120,7 +114,7 @@ public class HomeController : Controller
                 EstatusCalidad = string.IsNullOrEmpty(p.EstatusCalidad) ? "OK" : p.EstatusCalidad,
                 DetallesFallas = string.IsNullOrEmpty(p.DetallesFallas) ? "-" : p.DetallesFallas,
                 FechaFormatted = p.Fecha.HasValue ? p.Fecha.Value.ToString("yyyy-MM-dd HH:mm:ss") : "-"
-            });
+            }).ToList();
 
             return Json(new { success = true, data = dataFormateada });
         }

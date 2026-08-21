@@ -1,13 +1,15 @@
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\bin\Debug\net8.0\Enhartt.Domain.deps.json
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\bin\Debug\net8.0\Enhartt.Domain.dll
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\bin\Debug\net8.0\Enhartt.Domain.pdb
+C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\bin\Debug\net8.0\Autotek.Log.dll
+C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.csproj.AssemblyReference.cache
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.AssemblyInfoInputs.cache
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.AssemblyInfo.cs
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.csproj.CoreCompileInputs.cache
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.sourcelink.json
+C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt..611FE12F.Up2Date
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.dll
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\refint\Enhartt.Domain.dll
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.pdb
 C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\ref\Enhartt.Domain.dll
-C:\Users\darijim1\Documents\enhartt\Enhartt.Domain\obj\Debug\net8.0\Enhartt.Domain.csproj.AssemblyReference.cache
