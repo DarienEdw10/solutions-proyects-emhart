@@ -311,38 +311,48 @@ namespace Enhartt.Domain.Repositories
             return entityEntry.Entity;
         }
 
-       public async Task GuardarUsuarioNivelAsync(string cwid, int nivel, string nombre, string modificadoPor)
-{
-    if (string.IsNullOrWhiteSpace(cwid)) return;
-
-    if (cwid.Contains('\\'))
-    {
-        cwid = cwid.Split('\\')[1];
-    }
-
-    string cwidLimpio = cwid.Trim().ToLower();
-
-    var usuario = await _context.Usuarios
-        .FirstOrDefaultAsync(u => u.CWID.ToLower() == cwidLimpio);
-
-    if (usuario != null)
-    {
-        usuario.NivelDeUsuario = nivel;
-        usuario.Activo = true;
-    }
-    else
-    {
-        _context.Usuarios.Add(new Enhartt.Domain.Models.Usuario
+        public async Task GuardarUsuarioNivelAsync(string cwid, int nivel, string nombre, string modificadoPor)
         {
-            CWID = cwid.Trim(),
-            NivelDeUsuario = nivel,
-            Activo = true,
-            FechaCreacion = DateTime.Now
-        });
-    }
+            if (string.IsNullOrWhiteSpace(cwid)) return;
 
-    await _context.SaveChangesAsync();
-}
+            if (cwid.Contains('\\'))
+            {
+                cwid = cwid.Split('\\')[1];
+            }
+
+            string cwidLimpio = cwid.Trim();
+
+            // Mapeo formal del Rol/Descripción según el Nivel
+            string rolDescripcion = nivel switch
+            {
+                >= 30 => "SuperAdmin",
+                >= 20 => "Calidad",
+                _ => "Operador"
+            };
+
+            var usuario = await _context.Usuarios
+                .FirstOrDefaultAsync(u => u.CWID.ToLower() == cwidLimpio.ToLower());
+
+            if (usuario != null)
+            {
+                usuario.NivelDeUsuario = nivel;
+                usuario.Descripcion = rolDescripcion;
+                usuario.Activo = true;
+            }
+            else
+            {
+                _context.Usuarios.Add(new Enhartt.Domain.Models.Usuario
+                {
+                    CWID = cwidLimpio,
+                    NivelDeUsuario = nivel,
+                    Descripcion = rolDescripcion,
+                    Activo = true,
+                    FechaCreacion = DateTime.Now
+                });
+            }
+
+            await _context.SaveChangesAsync();
+        }
         // =============================================================
         // REVALIDACIÓN DE CALIDAD
         // =============================================================

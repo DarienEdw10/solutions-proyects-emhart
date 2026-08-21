@@ -7,6 +7,7 @@ namespace Enhartt.Domain.Models;
 public class Usuario
 {
     [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
 
     [Required]
@@ -15,11 +16,11 @@ public class Usuario
 
     public int NivelDeUsuario { get; set; } = 10;
 
+    [Required]
+    [MaxLength(100)]
+    public string Descripcion { get; set; } = string.Empty;
+
     public bool Activo { get; set; } = true;
 
     public DateTime FechaCreacion { get; set; } = DateTime.Now;
-
-    // Propiedad en memoria (no existe en la tabla física)
-    [NotMapped]
-    public string? Nombre { get; set; }
 }
