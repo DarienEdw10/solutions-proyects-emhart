@@ -21,8 +21,8 @@ if (!Directory.Exists(directorioLogs))
 }
 
 // Configuración del archivo físico de Logs
-string nombreArchivoLog = string.IsNullOrWhiteSpace(logSettings.ArchivoDeLog) 
-    ? "TuckerMonitor-00.log" 
+string nombreArchivoLog = string.IsNullOrWhiteSpace(logSettings.ArchivoDeLog)
+    ? "TuckerMonitor-00.log"
     : logSettings.ArchivoDeLog;
 
 logSettings.ArchivoDeLog = Path.Combine(directorioLogs, Path.GetFileName(nombreArchivoLog));
@@ -38,7 +38,7 @@ SettingsAutentificacion settingsAutentificacion = new();
 builder.Configuration.GetSection("SettingsAutentificacion").Bind(settingsAutentificacion);
 
 // Inyección como Singleton para mantener el caché y evitar reconexiones lentas en cada petición HTTP
-builder.Services.AddSingleton<RepositorioEmpleados>(sp => 
+builder.Services.AddSingleton<RepositorioEmpleados>(sp =>
     new RepositorioEmpleados(settingsAutentificacion, logger));
 
 // =============================================================
@@ -124,9 +124,9 @@ app.Use(async (context, next) =>
     if (esRutaVista && !esLlamadaApiOEstatal && context.User?.Identity?.IsAuthenticated == true)
     {
         string cwid = context.User.Identity.Name ?? "Desconocido";
-       // cwid = "david.galvan";
+        // cwid = "david.galvan";
         var log = context.RequestServices.GetService<Logger>();
-        
+
         log?.Registrar(
             nivel: Logger.NivelesLog.Detallado,
             tipo: Logger.TiposLog.Informativo,
