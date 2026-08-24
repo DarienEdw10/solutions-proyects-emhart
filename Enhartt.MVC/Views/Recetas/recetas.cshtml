@@ -4,62 +4,81 @@
     ViewData["Title"] = "Gestión de Recetas";
 }
 
-<!-- Fila de Selección Cascadas -->
-<div class="row mb-4">
+<!-- 1. Selector de Celda y Salida (Filtros Superiores) -->
+<div class="row g-2 mb-3 align-items-end">
     <div class="col-md-4">
-        <label class="form-label fw-bold">Seleccionar Celda</label>
-        <select id="selectCelda" class="form-select">
-            <option value="">-- Seleccione una Celda --</option>
-            @if (Model?.Celdas != null)
-            {
-                foreach (var celda in Model.Celdas)
+        <div class="bg-white px-3 py-2 rounded-2 border border-light-subtle shadow-sm">
+            <label class="form-label text-secondary fw-semibold mb-0 d-flex align-items-center" style="font-size: 0.75rem;">
+                <i class="bi bi-cpu-fill text-primary me-1"></i>Seleccionar Celda
+            </label>
+            <select id="selectCelda" class="form-select form-select-sm border-0 bg-transparent fw-bold text-dark shadow-none p-0" style="font-size: 0.85rem;">
+                <option value="">-- Seleccione una Celda --</option>
+                @if (Model?.Celdas != null)
                 {
-                    <option value="@celda.Celda">@celda.Celda</option>
+                    foreach (var celda in Model.Celdas)
+                    {
+                        <option value="@celda.Celda">@celda.Celda</option>
+                    }
                 }
-            }
-        </select>
+            </select>
+        </div>
     </div>
 
     <div class="col-md-4">
-        <label class="form-label fw-bold">Seleccionar Salida / Pistola</label>
-        <select id="selectSalida" class="form-select" disabled>
-            <option value="">-- Seleccione una Celda Primero --</option>
-        </select>
+        <div class="bg-white px-3 py-2 rounded-2 border border-light-subtle shadow-sm">
+            <label class="form-label text-secondary fw-semibold mb-0 d-flex align-items-center" style="font-size: 0.75rem;">
+                <i class="bi bi-crosshair text-info me-1"></i>Seleccionar Salida / Pistola
+            </label>
+            <select id="selectSalida" class="form-select form-select-sm border-0 bg-transparent fw-bold text-dark shadow-none p-0" style="font-size: 0.85rem;" disabled>
+                <option value="">-- Seleccione una Celda Primero --</option>
+            </select>
+        </div>
     </div>
 
-    <div class="col-md-4 d-flex align-items-end">
-        <div class="p-2 bg-light border rounded w-100 d-flex justify-content-between align-items-center">
-            <span class="text-muted small fw-bold">Última Modificación:</span>
-            <span id="lblUltimaMod" class="badge bg-secondary">N/A</span>
+    <div class="col-md-4">
+        <div class="px-3 py-2 rounded-2 border shadow-sm d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); height: 48px; border-color: #334155 !important;">
+            <span class="text-white-50 fw-semibold d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                <i class="bi bi-clock-history text-info"></i>Última Modificación:
+            </span>
+            <span id="lblUltimaMod" class="badge rounded-pill bg-dark border border-secondary text-info font-monospace" style="font-size: 0.75rem;">N/A</span>
         </div>
     </div>
 </div>
 
 <!-- Sección 1: Tabla de Límites de Calidad -->
-<div class="card mb-4 shadow-sm border-0">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
-        <h6 class="mb-0 fw-bold text-dark">
-            <i class="bi bi-sliders text-primary me-2"></i>Límites de Calidad (Parámetros Físicos)
-        </h6>
-        <button id="btnGuardarCambios" class="btn btn-success btn-sm" disabled>
-            <i class="bi bi-floppy me-1"></i>Guardar Cambios
+<div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden" style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3px solid #0284c7 !important;">
+    <div class="card-header border-0 px-3 py-2 d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+        <div class="d-flex align-items-center gap-2">
+            <div class="p-1 px-2 rounded-2 d-flex align-items-center justify-content-center" style="background: rgba(14, 165, 233, 0.2); border: 1px solid rgba(14, 165, 233, 0.4);">
+                <i class="bi bi-sliders text-info fs-6"></i>
+            </div>
+            <div>
+                <span class="fw-bold small text-white d-block lh-1" style="letter-spacing: 0.3px;">Límites de Calidad (Parámetros Físicos)</span>
+                <span class="d-block mt-1" style="font-size: 0.73rem; color: #94a3b8;">Configuración de tolerancias para la celda y salida activa</span>
+            </div>
+        </div>
+        <button id="btnGuardarCambios" class="btn btn-sm btn-success fw-bold px-3 py-1 shadow-sm d-flex align-items-center gap-1 border-0" 
+                style="background: linear-gradient(135deg, #10b981, #059669); font-size: 0.78rem;" disabled>
+            <i class="bi bi-floppy-fill"></i>
+            <span>Guardar Cambios</span>
         </button>
     </div>
+
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover table-striped align-middle mb-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Parámetro</th>
-                        <th>Unidad</th>
-                        <th>Límite Mínimo (Min)</th>
-                        <th>Límite Máximo (Max)</th>
-                        <th>Fecha Último Cambio</th>
-                        <th>Usuario</th>
-                        <th>Estado</th>
+            <table class="table table-hover table-striped align-middle mb-0 text-nowrap" style="font-size: 0.85rem;">
+                <thead>
+                    <tr class="text-uppercase" style="font-size: 0.74rem; letter-spacing: 0.5px;">
+                        <th class="py-2 ps-3 bg-dark text-white-50">Parámetro</th>
+                        <th class="py-2 bg-dark text-white-50">Unidad</th>
+                        <th class="py-2 bg-dark text-white-50">Límite Mínimo (Min)</th>
+                        <th class="py-2 bg-dark text-white-50">Límite Máximo (Max)</th>
+                        <th class="py-2 bg-dark text-white-50">Fecha Último Cambio</th>
+                        <th class="py-2 bg-dark text-white-50">Usuario</th>
+                        <th class="py-2 pe-3 bg-dark text-white-50 text-center">Estado</th>
                     </tr>
                 </thead>
-                <tbody id="tblLimitesBody">
+                <tbody id="tblLimitesBody" class="border-top-0">
                     <tr>
                         <td colspan="7" class="text-center text-muted py-4">
                             No hay parámetros configurados para la combinación seleccionada.
@@ -72,41 +91,58 @@
 </div>
 
 <!-- Sección 2: Historial de Cambios y Auditoría con Bitácora -->
-<div class="card shadow-sm border-0">
-    <div class="card-header bg-dark text-white py-3">
-        <h6 class="mb-0 fw-bold">
-            <i class="bi bi-clock-history me-2 text-warning"></i>Historial de Cambios, Auditoría y Bitácora de Mantenimiento
-        </h6>
+<div class="card border-0 shadow-sm rounded-3 mb-3 overflow-hidden" style="background: #ffffff; border: 1px solid #e2e8f0; border-top: 3px solid #f59e0b !important;">
+    <div class="card-header border-0 px-3 py-2 d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+        <div class="d-flex align-items-center gap-2">
+            <div class="p-1 px-2 rounded-2 d-flex align-items-center justify-content-center" style="background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4);">
+                <i class="bi bi-clock-history text-warning fs-6"></i>
+            </div>
+            <div>
+                <span class="fw-bold small text-white d-block lh-1" style="letter-spacing: 0.3px;">Historial de Cambios y Bitácora de Mantenimiento</span>
+                <span class="d-block mt-1" style="font-size: 0.73rem; color: #94a3b8;">Trazabilidad de modificaciones de recetas y motivos operativos</span>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <form id="formAuditoria" class="row g-3 mb-3">
+
+    <div class="card-body p-3">
+        <form id="formAuditoria" class="row g-2 mb-3 align-items-end">
             <div class="col-md-4">
-                <label class="form-label small fw-bold">Fecha Inicio</label>
-                <input type="date" id="fechaInicio" class="form-control form-control-sm">
+                <div class="bg-white px-2 py-1 rounded-2 border border-light-subtle shadow-sm">
+                    <label class="form-label text-secondary fw-semibold mb-0 d-flex align-items-center" style="font-size: 0.72rem;">
+                        <i class="bi bi-calendar-event-fill text-info me-1"></i>Fecha Inicio
+                    </label>
+                    <input type="date" id="fechaInicio" class="form-control form-control-sm border-0 bg-transparent fw-bold text-dark shadow-none p-0" style="font-size: 0.82rem;">
+                </div>
             </div>
             <div class="col-md-4">
-                <label class="form-label small fw-bold">Fecha Fin</label>
-                <input type="date" id="fechaFin" class="form-control form-control-sm">
+                <div class="bg-white px-2 py-1 rounded-2 border border-light-subtle shadow-sm">
+                    <label class="form-label text-secondary fw-semibold mb-0 d-flex align-items-center" style="font-size: 0.72rem;">
+                        <i class="bi bi-calendar-check-fill text-info me-1"></i>Fecha Fin
+                    </label>
+                    <input type="date" id="fechaFin" class="form-control form-control-sm border-0 bg-transparent fw-bold text-dark shadow-none p-0" style="font-size: 0.82rem;">
+                </div>
             </div>
-            <div class="col-md-4 d-flex align-items-end">
-                <button type="button" id="btnConsultarAuditoria" class="btn btn-primary btn-sm w-100">
-                    <i class="bi bi-search me-1"></i>Consultar Auditoría
+            <div class="col-md-4">
+                <button type="button" id="btnConsultarAuditoria" class="btn btn-primary w-100 rounded-2 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-1 border-0" 
+                        style="background: linear-gradient(135deg, #0284c7, #0369a1); height: 38px; font-size: 0.82rem;">
+                    <i class="bi bi-search"></i>
+                    <span>Consultar Auditoría</span>
                 </button>
             </div>
         </form>
 
         <div class="table-responsive">
-            <table class="table table-sm table-bordered text-center align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Fecha / Hora</th>
-                        <th>Celda / Salida</th>
-                        <th>Parámetro</th>
-                        <th>Límites Guardados (Mín | Máx)</th>
-                        <th>Estatus Registro</th>
-                        <th>Usuario</th>
-                        <th>Motivo / Bitácora</th>
-                        <th>Acción</th>
+            <table class="table table-sm table-hover table-bordered text-center align-middle mb-0" style="font-size: 0.82rem;">
+                <thead style="background-color: #0f172a; color: #f8fafc;">
+                    <tr class="text-uppercase" style="font-size: 0.72rem;">
+                        <th class="py-2 bg-dark text-white-50">Fecha / Hora</th>
+                        <th class="py-2 bg-dark text-white-50">Celda / Salida</th>
+                        <th class="py-2 bg-dark text-white-50">Parámetro</th>
+                        <th class="py-2 bg-dark text-white-50">Límites Guardados (Mín | Máx)</th>
+                        <th class="py-2 bg-dark text-white-50">Estatus Registro</th>
+                        <th class="py-2 bg-dark text-white-50">Usuario</th>
+                        <th class="py-2 bg-dark text-white-50">Motivo / Bitácora</th>
+                        <th class="py-2 bg-dark text-white-50">Acción</th>
                     </tr>
                 </thead>
                 <tbody id="tblAuditoriaBody">
@@ -124,33 +160,38 @@
 <!-- Modal de Confirmación Guardar con Bitácora de Mantenimiento -->
 <div class="modal fade" id="modalConfirmarGuardar" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white py-3">
-                <h5 class="modal-title fs-6 fw-bold">
-                    <i class="bi bi-journal-text me-2 text-warning"></i>Confirmar Modificación y Registrar Bitácora
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
+            <div class="modal-header border-0 px-3 py-2 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-bottom: 2px solid #0284c7 !important;">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-1 px-2 rounded-2" style="background: rgba(14, 165, 233, 0.2); border: 1px solid rgba(14, 165, 233, 0.4);">
+                        <i class="bi bi-journal-text text-info fs-6"></i>
+                    </div>
+                    <h6 class="modal-title small fw-bold mb-0 text-white">Confirmar Modificación y Bitácora</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body py-3">
-                <p class="mb-2 text-dark fs-6 fw-semibold">¿Estás seguro de guardar los nuevos límites de calidad?</p>
+            <div class="modal-body p-3 bg-light bg-opacity-50">
+                <p class="mb-2 text-dark small fw-bold">¿Estás seguro de guardar los nuevos límites de calidad?</p>
                 
-                <div class="mb-3">
-                    <label for="txtMotivoCambio" class="form-label fw-bold small text-dark">
-                        <i class="bi bi-chat-left-dots text-primary me-1"></i>Motivo del Cambio / Observación de Mantenimiento:
+                <div class="bg-white p-2 rounded-2 border border-light-subtle shadow-sm mb-3">
+                    <label for="txtMotivoCambio" class="form-label text-secondary fw-semibold mb-1 d-flex align-items-center" style="font-size: 0.75rem;">
+                        <i class="bi bi-chat-left-dots-fill text-primary me-1"></i>Motivo del Cambio / Bitácora de Mantenimiento:
                     </label>
-                    <textarea id="txtMotivoCambio" class="form-control form-control-sm" rows="3" 
-                              placeholder="Ej: Ajuste por cambio de lote de material, calibración de electrodo, prueba de penetración..."></textarea>
-                    <small class="text-muted">Este comentario quedará registrado en la bitácora de auditoría.</small>
+                    <textarea id="txtMotivoCambio" class="form-control form-control-sm border-0 bg-light bg-opacity-50 fw-semibold text-dark shadow-none" rows="3" 
+                              style="font-size: 0.82rem;" placeholder="Ej: Ajuste por cambio de lote, calibración de pistola, prueba de penetración..."></textarea>
+                    <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">Este comentario quedará firmado y registrado en la auditoría.</small>
                 </div>
 
-                <div class="alert alert-warning mb-0 py-2 small border-start border-4 border-warning">
-                    <i class="bi bi-info-circle-fill me-1"></i> Esta acción creará una nueva versión activa en SQL Server y desactivará la versión anterior manteniendo la trazabilidad.
+                <div class="alert alert-warning mb-0 py-2 px-3 rounded-2 d-flex align-items-center gap-2 border-0" style="background: rgba(245, 158, 11, 0.12); color: #b45309; font-size: 0.75rem;">
+                    <i class="bi bi-exclamation-triangle-fill fs-6 flex-shrink-0"></i>
+                    <span>Esta acción generará una nueva versión activa y desactivará la anterior para mantener la trazabilidad.</span>
                 </div>
             </div>
-            <div class="modal-footer bg-light py-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" id="btnConfirmarGuardarFinal" class="btn btn-sm btn-success fw-bold px-3">
-                    <i class="bi bi-check2-circle me-1"></i>Sí, Guardar y Registrar
+            <div class="modal-footer bg-white border-top px-3 py-2" style="border-color: #e2e8f0 !important;">
+                <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal" style="font-size: 0.8rem;">Cancelar</button>
+                <button type="button" id="btnConfirmarGuardarFinal" class="btn btn-sm btn-success fw-bold px-3 border-0" 
+                        style="background: linear-gradient(135deg, #10b981, #059669); font-size: 0.8rem;">
+                    <i class="bi bi-check2-circle me-1"></i>Guardar y Registrar
                 </button>
             </div>
         </div>
@@ -160,43 +201,46 @@
 <!-- Modal Comparador Diferencial -->
 <div class="modal fade" id="modalCompararRecetas" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-dark text-white py-3">
-                <h6 class="modal-title fw-bold mb-0">
-                    <i class="bi bi-file-diff text-warning me-2"></i>Comparativo Diferencial de Auditoría (Anterior vs. Nueva)
-                </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
+            <div class="modal-header border-0 px-3 py-2 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-bottom: 2px solid #f59e0b !important;">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-1 px-2 rounded-2" style="background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4);">
+                        <i class="bi bi-file-diff-fill text-warning fs-6"></i>
+                    </div>
+                    <h6 class="modal-title small fw-bold mb-0 text-white">Comparativo Diferencial de Auditoría</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4 bg-light">
-                <div class="row g-3 mb-3">
+            <div class="modal-body p-3 bg-light bg-opacity-50">
+                <div class="row g-2 mb-3">
                     <div class="col-md-6">
-                        <div class="card border-0 shadow-sm p-3 bg-white border-start border-4 border-secondary h-100">
-                            <small class="text-muted fw-bold d-block text-uppercase">Versión Anterior / Referencia</small>
-                            <h6 class="fw-bold mb-1 text-dark" id="cmp-ant-fecha">Fecha: -</h6>
-                            <small class="text-muted font-monospace d-block" id="cmp-ant-usr">Usuario: -</small>
-                            <small class="text-secondary d-block mt-1 fst-italic" id="cmp-ant-motivo">Motivo: -</small>
+                        <div class="card border-0 shadow-sm p-2 bg-white border-start border-3 border-secondary rounded-2 h-100">
+                            <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.68rem;">Versión Anterior / Referencia</small>
+                            <span class="fw-bold mb-0 text-dark small" id="cmp-ant-fecha">Fecha: -</span>
+                            <small class="text-muted font-monospace d-block" id="cmp-ant-usr" style="font-size: 0.72rem;">Usuario: -</small>
+                            <small class="text-secondary d-block mt-1 fst-italic" id="cmp-ant-motivo" style="font-size: 0.72rem;">Motivo: -</small>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="card border-0 shadow-sm p-3 bg-white border-start border-4 border-success h-100">
-                            <small class="text-muted fw-bold d-block text-uppercase">Versión Nueva / Modificada</small>
-                            <h6 class="fw-bold mb-1 text-success" id="cmp-nue-fecha">Fecha: -</h6>
-                            <small class="text-muted font-monospace d-block" id="cmp-nue-usr">Usuario: -</small>
-                            <small class="text-dark fw-semibold d-block mt-1" id="cmp-nue-motivo">Motivo: -</small>
+                        <div class="card border-0 shadow-sm p-2 bg-white border-start border-3 border-success rounded-2 h-100">
+                            <small class="text-success fw-bold d-block text-uppercase" style="font-size: 0.68rem;">Versión Nueva / Modificada</small>
+                            <span class="fw-bold mb-0 text-success small" id="cmp-nue-fecha">Fecha: -</span>
+                            <small class="text-muted font-monospace d-block" id="cmp-nue-usr" style="font-size: 0.72rem;">Usuario: -</small>
+                            <small class="text-dark fw-semibold d-block mt-1" id="cmp-nue-motivo" style="font-size: 0.72rem;">Motivo: -</small>
                         </div>
                     </div>
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table table-bordered align-middle text-center mb-0 bg-white shadow-sm">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Parámetro</th>
-                                <th>Mínimo Anterior</th>
-                                <th>Mínimo Nuevo</th>
-                                <th>Máximo Anterior</th>
-                                <th>Máximo Nuevo</th>
-                                <th>Estatus Cambio</th>
+                    <table class="table table-sm table-bordered align-middle text-center mb-0 bg-white shadow-sm" style="font-size: 0.82rem;">
+                        <thead style="background-color: #0f172a; color: #f8fafc;">
+                            <tr class="text-uppercase" style="font-size: 0.72rem;">
+                                <th class="py-2 bg-dark text-white-50">Parámetro</th>
+                                <th class="py-2 bg-dark text-white-50">Mínimo Anterior</th>
+                                <th class="py-2 bg-dark text-white-50">Mínimo Nuevo</th>
+                                <th class="py-2 bg-dark text-white-50">Máximo Anterior</th>
+                                <th class="py-2 bg-dark text-white-50">Máximo Nuevo</th>
+                                <th class="py-2 bg-dark text-white-50">Estatus Cambio</th>
                             </tr>
                         </thead>
                         <tbody id="tblComparadorBody">
@@ -205,8 +249,8 @@
                     </table>
                 </div>
             </div>
-            <div class="modal-footer bg-white border-0 py-2">
-                <button type="button" class="btn btn-sm btn-secondary fw-bold" data-bs-dismiss="modal">Cerrar Comparador</button>
+            <div class="modal-footer bg-white border-top px-3 py-2" style="border-color: #e2e8f0 !important;">
+                <button type="button" class="btn btn-sm btn-secondary fw-bold px-3" data-bs-dismiss="modal" style="font-size: 0.8rem;">Cerrar Comparador</button>
             </div>
         </div>
     </div>
