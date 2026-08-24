@@ -42,21 +42,23 @@ builder.Services.AddSingleton<RepositorioEmpleados>(sp =>
     new RepositorioEmpleados(settingsAutentificacion, logger));
 
 // =============================================================
-// 3. INYECCIÓN DE DEPENDENCIAS MVC Y BASE DE DATOS OPTIMIZADA
+// 3. INYECCIÓN DE DEPENDENCIAS MVC Y BASE DE DATOS SQLITE
 // =============================================================
 builder.Services.AddControllersWithViews();
 
-// Configuración de DbContext con control de reconexión y timeouts
+// Configuración de DbContext con SQLite
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+    ?? "Data Source=emhart_local.db";
+
+// Resuelve la ruta si el archivo está en la raíz de la solución
+if (connectionString.Contains("emhart_local.db") && !File.Exists("emhart_local.db") && File.Exists("../emhart_local.db"))
+{
+    connectionString = "Data Source=../emhart_local.db";
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), sqlOptions =>
-    {
-        sqlOptions.CommandTimeout(5); // Máximo 5 segundos de espera por consulta
-        sqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 2,
-            maxRetryDelay: TimeSpan.FromSeconds(2),
-            errorNumbersToAdd: null);
-    });
+    options.UseSqlite(connectionString);
 });
 
 builder.Services.AddScoped<IRepository, Repository>();
@@ -87,15 +89,14 @@ if (!app.Environment.IsDevelopment())
 app.UseStaticFiles();
 
 app.UseRouting();
+
 // =============================================================
 // MOCK DE IDENTIDAD PARA PRUEBAS (Hardcode temporal)
 // =============================================================
 /*app.Use(async (context, next) =>
 {
-    // Cambia el CWID aquí para probar distintos escenarios:
-    // Ejemplos: "operador_prueba", "usuario_consulta", o un CWID de un operador
-    string cwidSimulado = "darienedwin.jimenez"; // Cambia este valor según el usuario que quieras simular
-//yaracer1
+    string cwidSimulado = "darienedwin.jimenez";
+
     var claims = new[]
     {
         new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, cwidSimulado),
@@ -108,6 +109,7 @@ app.UseRouting();
     await next();
 });
 */
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -116,7 +118,6 @@ app.UseAuthorization();
 // =============================================================
 app.Use(async (context, next) =>
 {
-    // Solo auditar accesos a páginas principales (ignorar estáticos, css, js, api polling)
     var path = context.Request.Path.Value?.ToLower() ?? "";
     bool esRutaVista = path == "" || path == "/" || path.StartsWith("/home") || path.StartsWith("/recetas") || path.StartsWith("/logs");
     bool esLlamadaApiOEstatal = path.Contains(".") || path.Contains("obtener") || path.Contains("revalidar");
@@ -124,7 +125,6 @@ app.Use(async (context, next) =>
     if (esRutaVista && !esLlamadaApiOEstatal && context.User?.Identity?.IsAuthenticated == true)
     {
         string cwid = context.User.Identity.Name ?? "Desconocido";
-        // cwid = "david.galvan";
         var log = context.RequestServices.GetService<Logger>();
 
         log?.Registrar(
@@ -140,6 +140,7 @@ app.Use(async (context, next) =>
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
 using (var scope = app.Services.CreateScope())
 {
     var repoEmpleados = scope.ServiceProvider.GetRequiredService<RepositorioEmpleados>();
